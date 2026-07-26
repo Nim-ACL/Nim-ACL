@@ -25,7 +25,7 @@ test "Doubling basic":
 
 test "FunctionalGraph jump":
   let to = @[1, 2, 3, 1, 5, 5]
-  let fg = initFunctionalGraph(to, maxLog = 20)
+  let fg = initFunctionalGraph(to, maxLog = 40)
 
   check fg.len == 6
 
@@ -56,7 +56,7 @@ test "FunctionalGraph orbit and cycleInfo":
   check orb4.cycle == @[5]
 
 test "FunctionalGraph self loops":
-  let fg = initFunctionalGraph(@[0, 1, 2], maxLog = 5)
+  let fg = initFunctionalGraph(@[0, 1, 2], maxLog = 6)
 
   for v in 0 ..< 3:
     check fg.jump(v, 0) == v
@@ -67,5 +67,5 @@ test "FunctionalGraph self loops":
     check info.period == 1
 
     let orb = fg.orbit(v)
-    check orb.prefix == @[]
+    check orb.prefix == newSeq[int](0)
     check orb.cycle == @[v]
