@@ -110,6 +110,14 @@ proc solveRows(
   )
 
 
+## Computes the min-plus convolution when the first sequence is
+## discrete convex.
+##
+## If `n = convex.len` and `m = arbitrary.len`, the running time is
+## `O(m * log(n + m) + n + m)`.
+##
+## All adjacent differences used by the convexity check and all candidate
+## sums evaluated by the algorithm must be representable as `int64`.
 proc minPlusConvolutionConvexArbitrary*(
     convex,
     arbitrary: openArray[int64],
@@ -140,3 +148,86 @@ proc minPlusConvolutionConvexArbitrary*(
     0,
     arbitrary.high,
   )
+
+
+## Computes the min-plus convolution when the second sequence is
+## discrete convex.
+##
+## If `n = arbitrary.len` and `m = convex.len`, the running time is
+## `O(n * log(n + m) + n + m)`.
+##
+## All adjacent differences used by the convexity check and all candidate
+## sums evaluated by the algorithm must be representable as `int64`.
+proc minPlusConvolutionArbitraryConvex*(
+    arbitrary,
+    convex: openArray[int64],
+): seq[int64] =
+  minPlusConvolutionConvexArbitrary(
+    convex,
+    arbitrary,
+  )
+
+
+## Computes the min-plus convolution of two arbitrary sequences.
+##
+## If `n = left.len` and `m = right.len`, the running time is `O(n * m)`.
+##
+## Every candidate sum evaluated by the algorithm must be representable
+## as `int64`.
+proc minPlusConvolution*(
+    left,
+    right: openArray[int64],
+): seq[int64] =
+  if left.len == 0 or
+      right.len == 0:
+    return newSeq[int64]()
+
+  result =
+    newSeq[int64](
+      left.len +
+      right.len -
+      1
+    )
+
+  for outputIndex in 0 ..< result.len:
+    let minimumLeftIndex =
+      max(
+        0,
+        outputIndex -
+        right.high,
+      )
+
+    let maximumLeftIndex =
+      min(
+        left.high,
+        outputIndex,
+      )
+
+    var bestValue =
+      left[minimumLeftIndex] +
+      right[
+        outputIndex -
+        minimumLeftIndex
+      ]
+
+    var leftIndex =
+      minimumLeftIndex +
+      1
+
+    while leftIndex <=
+        maximumLeftIndex:
+      let candidate =
+        left[leftIndex] +
+        right[
+          outputIndex -
+          leftIndex
+        ]
+
+      if candidate < bestValue:
+        bestValue =
+          candidate
+
+      leftIndex.inc
+
+    result[outputIndex] =
+      bestValue

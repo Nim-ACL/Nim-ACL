@@ -219,3 +219,157 @@ suite "Min-plus convolution convex-arbitrary":
               )
 
           check actual == expected
+
+
+suite "Min-plus convolution complete public family":
+  test "arbitrary-convex known case and validation":
+    let
+      arbitrary =
+        @[5'i64, 2]
+      convex =
+        @[0'i64, 1, 3]
+
+    check minPlusConvolutionArbitraryConvex(
+      arbitrary,
+      convex,
+    ) == @[5'i64, 2, 3, 5]
+
+    expect ValueError:
+      discard minPlusConvolutionArbitraryConvex(
+        @[0'i64],
+        @[0'i64, 2, 1],
+      )
+
+  test "general known case and empty inputs":
+    let
+      left =
+        @[3'i64, -1, 4]
+      right =
+        @[2'i64, 5]
+      empty: seq[int64] =
+        @[]
+
+    check minPlusConvolution(
+      left,
+      right,
+    ) == @[5'i64, 1, 4, 9]
+
+    check minPlusConvolution(
+      empty,
+      right,
+    ).len == 0
+
+    check minPlusConvolution(
+      left,
+      empty,
+    ).len == 0
+
+  test "additional API input preservation":
+    let
+      arbitrary =
+        @[7'i64, -1, 3]
+      convex =
+        @[2'i64, 1, 1, 2, 4]
+      other =
+        @[-4'i64, 6, 0]
+
+      arbitraryBefore =
+        arbitrary
+      convexBefore =
+        convex
+      otherBefore =
+        other
+
+    discard minPlusConvolutionArbitraryConvex(
+      arbitrary,
+      convex,
+    )
+
+    discard minPlusConvolution(
+      arbitrary,
+      other,
+    )
+
+    check arbitrary == arbitraryBefore
+    check convex == convexBefore
+    check other == otherBefore
+
+  test "representable int64 boundaries":
+    let
+      nearHigh =
+        @[high(int64) - 10]
+      positive =
+        @[5'i64]
+
+    check minPlusConvolution(
+      nearHigh,
+      positive,
+    ) == @[high(int64) - 5]
+
+    let
+      nearLowConvex =
+        @[
+          low(int64) + 10,
+          low(int64) + 12,
+          low(int64) + 15,
+        ]
+
+    check minPlusConvolutionConvexArbitrary(
+      nearLowConvex,
+      positive,
+    ) == naiveMinPlusConvolution(
+      nearLowConvex,
+      positive,
+    )
+
+    check minPlusConvolutionArbitraryConvex(
+      positive,
+      nearLowConvex,
+    ) == naiveMinPlusConvolution(
+      positive,
+      nearLowConvex,
+    )
+
+  test "additional APIs randomized differential":
+    var state =
+      0xBB67AE8584CAA73B'u64
+
+    for leftLength in 0 .. 12:
+      for rightLength in 0 .. 12:
+        for repetition in 0 ..< 10:
+          discard repetition
+
+          let
+            arbitraryLeft =
+              randomSequence(
+                state,
+                leftLength,
+              )
+
+            arbitraryRight =
+              randomSequence(
+                state,
+                rightLength,
+              )
+
+            convexRight =
+              randomConvexSequence(
+                state,
+                rightLength,
+              )
+
+          check minPlusConvolution(
+            arbitraryLeft,
+            arbitraryRight,
+          ) == naiveMinPlusConvolution(
+            arbitraryLeft,
+            arbitraryRight,
+          )
+
+          check minPlusConvolutionArbitraryConvex(
+            arbitraryLeft,
+            convexRight,
+          ) == naiveMinPlusConvolution(
+            arbitraryLeft,
+            convexRight,
+          )
