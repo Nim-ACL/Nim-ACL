@@ -144,6 +144,135 @@ func negateSign*(value: Float128): Float128 {.inline.} =
     low: value.low
   )
 
+func float128IncrementBits(
+    value: Float128;
+): Float128 {.inline.} =
+  if value.low == high(uint64):
+    Float128(
+      high: value.high + 1'u64,
+      low: 0'u64,
+    )
+  else:
+    Float128(
+      high: value.high,
+      low: value.low + 1'u64,
+    )
+
+func float128DecrementBits(
+    value: Float128;
+): Float128 {.inline.} =
+  if value.low == 0'u64:
+    Float128(
+      high: value.high - 1'u64,
+      low: high(uint64),
+    )
+  else:
+    Float128(
+      high: value.high,
+      low: value.low - 1'u64,
+    )
+
+func nextUp*(value: Float128): Float128 {.inline.} =
+  ## Returns the adjacent representable value toward positive infinity.
+  ##
+  ## NaN encodings are returned bit-for-bit unchanged. Both signed zeros
+  ## advance to the positive minimum subnormal.
+
+  if isNaN(value) or sameBits(
+      value,
+      positiveInfinityFloat128,
+  ):
+    return value
+
+  if isZero(value):
+    return fromBits(
+      0'u64,
+      1'u64,
+    )
+
+  if signBit(value):
+    result =
+      float128DecrementBits(
+        value,
+      )
+  else:
+    result =
+      float128IncrementBits(
+        value,
+      )
+
+func nextDown*(value: Float128): Float128 {.inline.} =
+  ## Returns the adjacent representable value toward negative infinity.
+  ##
+  ## NaN encodings are returned bit-for-bit unchanged. Both signed zeros
+  ## advance to the negative minimum subnormal.
+
+  if isNaN(value) or sameBits(
+      value,
+      negativeInfinityFloat128,
+  ):
+    return value
+
+  if isZero(value):
+    return fromBits(
+      float128SignMask,
+      1'u64,
+    )
+
+  if signBit(value):
+    result =
+      float128IncrementBits(
+        value,
+      )
+  else:
+    result =
+      float128DecrementBits(
+        value,
+      )
+
+func copySign*(magnitude, sign: Float128): Float128 {.inline.} =
+  ## Copies only the sign bit from sign to magnitude.
+  ##
+  ## Every other magnitude bit is preserved, including a NaN payload and
+  ## its quiet or signaling state.
+
+  withSign(
+    magnitude,
+    signBit(sign),
+  )
+
+func float128TotalOrderKey(
+    value: Float128;
+): tuple[high, low: uint64] {.inline.} =
+  if signBit(value):
+    (
+      high: not value.high,
+      low: not value.low,
+    )
+  else:
+    (
+      high: value.high xor float128SignMask,
+      low: value.low,
+    )
+
+func totalOrder*(x, y: Float128): bool {.inline.} =
+  ## Applies an inclusive total ordering to every binary128 encoding.
+  ##
+  ## The order distinguishes signed zeros, signaling and quiet NaNs,
+  ## NaN signs, and NaN payloads.
+
+  let
+    xKey =
+      float128TotalOrderKey(x)
+    yKey =
+      float128TotalOrderKey(y)
+
+  xKey.high < yKey.high or
+    (
+      xKey.high == yKey.high and
+      xKey.low <= yKey.low
+    )
+
 func zeroFloat128*(negative: bool = false): Float128 {.inline.} =
   if negative:
     negativeZeroFloat128
