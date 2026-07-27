@@ -89,8 +89,10 @@ when not declared ATCODER_EXTRA_GRAPH_OFFLINE_DYNAMIC_CONNECTIVITY_HPP:
 
   proc componentCounts*(dc: OfflineDynamicConnectivity): seq[int] =
     ## Returns the number of connected components at each time.
-    result = newSeq[int](dc.q)
+    var counts = newSeq[int](dc.q)
 
     dc.run(proc(t: int, uf: RollbackDSU) =
-      result[t] = uf.componentCount
+      counts[t] = uf.componentCount
     )
+
+    counts
