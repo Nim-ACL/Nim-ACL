@@ -4,6 +4,51 @@ All notable changes to Nim-ACL will be documented in this file.
 
 The format follows Keep a Changelog, and versions use Semantic Versioning.
 
+## [0.4.0] - 2026-07-28
+
+This release extends Float128 IEEE-style operations, completes the min-plus convolution API family, publishes a curated graph facade, and improves graph compatibility while retaining explicitly deferred scopes.
+
+### Highlights
+
+- Added `nextUp`, `nextDown`, `copySign`, and `totalOrder` for Float128.
+- Completed int64 min-plus convolution with convex-arbitrary, arbitrary-convex, and general entry points.
+- Added the curated 11-module graph facade `atcoder/extra/graph/graph`.
+- Qualified the existing functional-graph API and repaired the OfflineDynamicConnectivity component-count helper.
+
+### Added
+
+- add Float128 `nextUp` and `nextDown`.
+- add Float128 `copySign` and `totalOrder`.
+- add `minPlusConvolutionConvexArbitrary`.
+- add `minPlusConvolutionArbitraryConvex`.
+- add the general `minPlusConvolution` entry point.
+- add the curated graph facade, its dedicated contract, bilingual documentation, and index entries.
+
+### Changed
+
+- qualify the existing functional-graph implementation with a dedicated cross-version contract.
+- retain existing direct graph imports while providing a bounded convenience facade.
+
+### Fixed
+
+- avoid capturing the implicit `result` sequence in `OfflineDynamicConnectivity.componentCounts`.
+
+### Compatibility
+
+- existing graph module import paths remain supported.
+- the graph facade is curated rather than export-all and adds no wrapper APIs or algorithm reimplementations.
+- Float128 supplementary IEEE-style Packet 2 remains separately deferred and was not inferred from Packet 1.
+
+### Release qualification
+
+- `nimble check` passed on Nim 2.2.10 and Nim 2.2.4.
+- four changed contract programs passed 8/8 lanes across Nim 2.2.10 and Nim 2.2.4.
+- all 28 tracked non-2D backlog rows have terminal dispositions: 22 closed and 6 explicitly deferred, with no active or planned rows.
+
+### Deferred
+
+- Float128 shortest round-trip formatting, supplementary IEEE-style Packet 2, and Float256 feasibility remain deferred.
+- the FPS interpolation import-path audit, oj-verify environment restoration, and visualization recovery remain separately deferred.
 ## [0.3.0] - 2026-07-26
 
 This release completes the v0.3.0 two-dimensional data-structure roadmap and standardizes array-like 2D APIs on `(height, width)` dimensions, `(row, col)` indices, and half-open rectangles.

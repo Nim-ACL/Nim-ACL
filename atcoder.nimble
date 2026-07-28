@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.3.0"
+version       = "0.4.0"
 author        = "zer0-star"
 description   = "ACL (AtCoder Library) implementation in Nim"
 license       = "CC0"
