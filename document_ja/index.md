@@ -655,3 +655,11 @@ Nim-ACL の正式APIを、日本語のimport名と
 
 - [日本語API一覧](extra/ja/index.md)
 <!-- /NIM_ACL_JAPANESE_FACADE_INDEX_V1 -->
+
+<!-- GRAPH_FACADE_PACKET_ONE_START -->
+## グラフ facade
+
+| 概要 | ドキュメント | Import |
+| --- | --- | --- |
+| グラフ表現、最短路、連結性、最小全域木、functional graph、offline connectivityをまとめたcurated facadeです。既存のdirect importも維持します。 | [Graph facade](./extra/graph/graph.html) | `import atcoder/extra/graph/graph` |
+<!-- GRAPH_FACADE_PACKET_ONE_END -->
