@@ -833,6 +833,18 @@ when not declared ATCODER_EXTRA_NUMERIC_INT128_HPP:
     let ten =
       toUInt128(10'u64)
 
+    let maximum =
+      rawUInt128(
+        high(uint64),
+        high(uint64),
+      )
+
+    let maximumDivision =
+      unsignedDivMod(
+        maximum,
+        ten,
+      )
+
     var value =
       toUInt128(0'u64)
 
@@ -847,19 +859,34 @@ when not declared ATCODER_EXTRA_NUMERIC_INT128_HPP:
           "invalid UInt128 digit",
         )
 
+      let digit =
+        toUInt128(
+          uint64(
+            ord(character) -
+              ord('0')
+          )
+        )
+
+      if value >
+          maximumDivision.quotient or
+          (
+            value ==
+              maximumDivision.quotient and
+            digit >
+              maximumDivision.remainder
+          ):
+        raise newException(
+          ValueError,
+          "UInt128 overflow",
+        )
+
       value =
         value * ten +
-          toUInt128(
-            uint64(
-              ord(character) -
-                ord('0')
-            )
-          )
+          digit
 
       inc index
 
     value
-
   proc parseInt128*(
       text: string,
   ): Int128 =
@@ -869,35 +896,96 @@ when not declared ATCODER_EXTRA_NUMERIC_INT128_HPP:
         "empty Int128 string",
       )
 
+    var index =
+      0
+
+    var negative =
+      false
+
     if text[0] == '-':
-      if text.len == 1:
-        raise newException(
-          ValueError,
-          "missing Int128 digits",
-        )
+      negative =
+        true
 
-      -asInt128(
-        parseUInt128(
-          text[1 .. ^1]
-        )
-      )
+      inc index
     elif text[0] == '+':
-      if text.len == 1:
-        raise newException(
-          ValueError,
-          "missing Int128 digits",
+      inc index
+
+    if index >= text.len:
+      raise newException(
+        ValueError,
+        "missing Int128 digits",
+      )
+
+    let ten =
+      toUInt128(10'u64)
+
+    let limit =
+      if negative:
+        rawUInt128(
+          0'u64,
+          1'u64 shl 63,
+        )
+      else:
+        rawUInt128(
+          high(uint64),
+          high(uint64) shr 1,
         )
 
-      asInt128(
-        parseUInt128(
-          text[1 .. ^1]
+    let limitDivision =
+      unsignedDivMod(
+        limit,
+        ten,
+      )
+
+    var magnitudeValue =
+      toUInt128(0'u64)
+
+    while index < text.len:
+      let character =
+        text[index]
+
+      if character < '0' or
+          character > '9':
+        raise newException(
+          ValueError,
+          "invalid Int128 digit",
         )
+
+      let digit =
+        toUInt128(
+          uint64(
+            ord(character) -
+              ord('0')
+          )
+        )
+
+      if magnitudeValue >
+          limitDivision.quotient or
+          (
+            magnitudeValue ==
+              limitDivision.quotient and
+            digit >
+              limitDivision.remainder
+          ):
+        raise newException(
+          ValueError,
+          "Int128 overflow",
+        )
+
+      magnitudeValue =
+        magnitudeValue * ten +
+          digit
+
+      inc index
+
+    if negative:
+      -asInt128(
+        magnitudeValue
       )
     else:
       asInt128(
-        parseUInt128(text)
+        magnitudeValue
       )
-
   proc pow*(
       base,
       exponent,
