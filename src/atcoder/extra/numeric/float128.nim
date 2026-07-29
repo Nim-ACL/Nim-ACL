@@ -273,6 +273,303 @@ func totalOrder*(x, y: Float128): bool {.inline.} =
       xKey.low <= yKey.low
     )
 
+func float128PacketTwoQuietNaN(
+    value: Float128;
+): Float128 {.inline.} =
+  let bits =
+    toBits(value)
+
+  fromBits(
+    bits.high or
+      float128QuietNaNMask,
+    bits.low,
+  )
+
+func float128PacketTwoPreferredQuietNaN(
+    x,
+    y: Float128;
+): Float128 {.inline.} =
+  if isNaN(x):
+    float128PacketTwoQuietNaN(x)
+  else:
+    float128PacketTwoQuietNaN(y)
+
+func float128PacketTwoNumericEqual(
+    x,
+    y: Float128;
+): bool {.inline.} =
+  if isNaN(x) or
+      isNaN(y):
+    return false
+
+  if isZero(x) and
+      isZero(y):
+    return true
+
+  sameBits(x, y)
+
+func float128PacketTwoNumericLess(
+    x,
+    y: Float128;
+): bool {.inline.} =
+  if isNaN(x) or
+      isNaN(y) or
+      float128PacketTwoNumericEqual(
+        x,
+        y,
+      ):
+    return false
+
+  totalOrder(x, y)
+
+func float128PacketTwoMagnitude(
+    value: Float128;
+): Float128 {.inline.} =
+  withSign(
+    value,
+    false,
+  )
+
+func nextAfter*(x, y: Float128): Float128 {.inline.} =
+  ## Returns the adjacent encoding from x in the direction of y.
+  ##
+  ## Numerically equal operands return the exact encoding of y. A NaN
+  ## result uses the left NaN when present and otherwise the right NaN;
+  ## signaling NaNs are quieted while their sign and payload are preserved.
+
+  if isNaN(x) or
+      isNaN(y):
+    return float128PacketTwoPreferredQuietNaN(
+      x,
+      y,
+    )
+
+  if float128PacketTwoNumericEqual(
+      x,
+      y,
+  ):
+    return y
+
+  if float128PacketTwoNumericLess(
+      x,
+      y,
+  ):
+    nextUp(x)
+  else:
+    nextDown(x)
+
+func totalOrderMag*(x, y: Float128): bool {.inline.} =
+  ## Applies totalOrder after clearing both sign bits.
+
+  totalOrder(
+    float128PacketTwoMagnitude(x),
+    float128PacketTwoMagnitude(y),
+  )
+
+func minimum*(x, y: Float128): Float128 {.inline.} =
+  ## Returns the NaN-propagating numeric minimum.
+  ##
+  ## Equal numeric values are resolved by totalOrder, selecting negative
+  ## zero over positive zero.
+
+  if isNaN(x) or
+      isNaN(y):
+    return float128PacketTwoPreferredQuietNaN(
+      x,
+      y,
+    )
+
+  if float128PacketTwoNumericLess(
+      x,
+      y,
+  ):
+    return x
+
+  if float128PacketTwoNumericLess(
+      y,
+      x,
+  ):
+    return y
+
+  if totalOrder(x, y):
+    x
+  else:
+    y
+
+func maximum*(x, y: Float128): Float128 {.inline.} =
+  ## Returns the NaN-propagating numeric maximum.
+  ##
+  ## Equal numeric values are resolved by totalOrder, selecting positive
+  ## zero over negative zero.
+
+  if isNaN(x) or
+      isNaN(y):
+    return float128PacketTwoPreferredQuietNaN(
+      x,
+      y,
+    )
+
+  if float128PacketTwoNumericLess(
+      x,
+      y,
+  ):
+    return y
+
+  if float128PacketTwoNumericLess(
+      y,
+      x,
+  ):
+    return x
+
+  if totalOrder(x, y):
+    y
+  else:
+    x
+
+func minimumNumber*(x, y: Float128): Float128 {.inline.} =
+  ## Prefers the numeric operand when exactly one operand is NaN.
+
+  let
+    xNaN =
+      isNaN(x)
+    yNaN =
+      isNaN(y)
+
+  if xNaN and
+      yNaN:
+    return float128PacketTwoQuietNaN(x)
+
+  if xNaN:
+    return y
+
+  if yNaN:
+    return x
+
+  minimum(x, y)
+
+func maximumNumber*(x, y: Float128): Float128 {.inline.} =
+  ## Prefers the numeric operand when exactly one operand is NaN.
+
+  let
+    xNaN =
+      isNaN(x)
+    yNaN =
+      isNaN(y)
+
+  if xNaN and
+      yNaN:
+    return float128PacketTwoQuietNaN(x)
+
+  if xNaN:
+    return y
+
+  if yNaN:
+    return x
+
+  maximum(x, y)
+
+func minimumMagnitude*(x, y: Float128): Float128 {.inline.} =
+  ## Returns the operand with smaller magnitude and propagates NaNs.
+
+  if isNaN(x) or
+      isNaN(y):
+    return float128PacketTwoPreferredQuietNaN(
+      x,
+      y,
+    )
+
+  let
+    xMagnitude =
+      float128PacketTwoMagnitude(x)
+    yMagnitude =
+      float128PacketTwoMagnitude(y)
+
+  if float128PacketTwoNumericLess(
+      xMagnitude,
+      yMagnitude,
+  ):
+    return x
+
+  if float128PacketTwoNumericLess(
+      yMagnitude,
+      xMagnitude,
+  ):
+    return y
+
+  minimum(x, y)
+
+func maximumMagnitude*(x, y: Float128): Float128 {.inline.} =
+  ## Returns the operand with larger magnitude and propagates NaNs.
+
+  if isNaN(x) or
+      isNaN(y):
+    return float128PacketTwoPreferredQuietNaN(
+      x,
+      y,
+    )
+
+  let
+    xMagnitude =
+      float128PacketTwoMagnitude(x)
+    yMagnitude =
+      float128PacketTwoMagnitude(y)
+
+  if float128PacketTwoNumericLess(
+      xMagnitude,
+      yMagnitude,
+  ):
+    return y
+
+  if float128PacketTwoNumericLess(
+      yMagnitude,
+      xMagnitude,
+  ):
+    return x
+
+  maximum(x, y)
+
+func minimumMagnitudeNumber*(x, y: Float128): Float128 {.inline.} =
+  ## Prefers the numeric operand when exactly one operand is NaN.
+
+  let
+    xNaN =
+      isNaN(x)
+    yNaN =
+      isNaN(y)
+
+  if xNaN and
+      yNaN:
+    return float128PacketTwoQuietNaN(x)
+
+  if xNaN:
+    return y
+
+  if yNaN:
+    return x
+
+  minimumMagnitude(x, y)
+
+func maximumMagnitudeNumber*(x, y: Float128): Float128 {.inline.} =
+  ## Prefers the numeric operand when exactly one operand is NaN.
+
+  let
+    xNaN =
+      isNaN(x)
+    yNaN =
+      isNaN(y)
+
+  if xNaN and
+      yNaN:
+    return float128PacketTwoQuietNaN(x)
+
+  if xNaN:
+    return y
+
+  if yNaN:
+    return x
+
+  maximumMagnitude(x, y)
+
 func zeroFloat128*(negative: bool = false): Float128 {.inline.} =
   if negative:
     negativeZeroFloat128
