@@ -3964,3 +3964,806 @@ func remainder*(x, y: Float128): Float128 =
 
 func fmod*(x, y: Float128): Float128 =
   float128RemainderOperation(x, y, false)
+
+# ----------------------------------------------------------------------
+# Shortest round-trip decimal formatting for Float128
+# ----------------------------------------------------------------------
+
+type
+  Float128ShortestRatio = object
+    numerator: Float128DecimalBigUInt
+    denominator: Float128DecimalBigUInt
+
+  Float128ShortestPrepared = object
+    numerator: Float128DecimalBigUInt
+    denominator: Float128DecimalBigUInt
+    lowerNumerator: Float128DecimalBigUInt
+    upperNumerator: Float128DecimalBigUInt
+    boundaryDenominator: Float128DecimalBigUInt
+    decimalExponent: int
+    midpointInclusive: bool
+
+  Float128ShortestCandidate = object
+    digits: string
+    decimalPower: int
+    significantDigits: int
+    coefficientOdd: bool
+
+proc float128ShortestOne(): Float128DecimalBigUInt =
+  result.limbs = @[1'u32]
+
+proc float128ShortestClone(
+    value: Float128DecimalBigUInt
+): Float128DecimalBigUInt =
+  result =
+    float128DecimalClone(value)
+
+
+
+proc float128ShortestFromUInt256(
+    value: UInt256
+): Float128DecimalBigUInt =
+  result =
+    float128DecimalFromUInt256(value)
+
+
+
+proc float128ShortestShiftLeft(
+    value: Float128DecimalBigUInt;
+    distance: int
+): Float128DecimalBigUInt =
+  result =
+    value.float128DecimalShiftLeft(
+      distance,
+    )
+
+
+
+proc float128ShortestMultiplyBig(
+    lhs,
+    rhs: Float128DecimalBigUInt
+): Float128DecimalBigUInt =
+  result =
+    float128DecimalMultiplyBig(
+      lhs,
+      rhs,
+    )
+
+
+
+proc float128ShortestPowerOfTen(
+    exponent: int
+): Float128DecimalBigUInt =
+  result =
+    float128DecimalPowerOfTenFast(
+      exponent,
+    )
+
+
+
+proc float128ShortestAddBig(
+    lhs,
+    rhs: Float128DecimalBigUInt
+): Float128DecimalBigUInt =
+  result =
+    lhs.float128ShortestClone(
+    )
+
+  var
+    index = 0
+    carry = 0'u64
+
+  while index < rhs.limbs.len or
+      carry != 0'u64:
+    if index == result.limbs.len:
+      result.limbs.add(0'u32)
+
+    let
+      rhsWord =
+        if index < rhs.limbs.len:
+          uint64(rhs.limbs[index])
+        else:
+          0'u64
+
+      total =
+        uint64(result.limbs[index]) +
+        rhsWord +
+        carry
+
+    result.limbs[index] =
+      uint32(
+        total and
+        0xFFFF_FFFF'u64
+      )
+
+    carry = total shr 32
+    inc index
+
+  result.float128DecimalNormalize()
+
+
+proc float128ShortestDyadicRatio(
+    significand: UInt256;
+    binaryExponent: int
+): Float128ShortestRatio =
+  result.numerator =
+    significand.float128ShortestFromUInt256(
+    )
+
+  result.denominator =
+    float128ShortestOne()
+
+  if binaryExponent >= 0:
+    result.numerator =
+      result.numerator.float128ShortestShiftLeft(
+        binaryExponent,
+      )
+  else:
+    result.denominator =
+      result.denominator.float128ShortestShiftLeft(
+        -binaryExponent,
+      )
+
+proc float128ShortestAlignedInteger(
+    significand: UInt256;
+    binaryExponent,
+    commonBinaryExponent: int
+): Float128DecimalBigUInt =
+  result =
+    significand.float128ShortestFromUInt256(
+    )
+
+  let shift =
+    binaryExponent -
+    commonBinaryExponent
+
+  doAssert shift >= 0
+
+  if shift != 0:
+    result =
+      result.float128ShortestShiftLeft(
+        shift,
+      )
+
+proc float128ShortestPrepare(
+    value: Float128
+): Float128ShortestPrepared =
+  let
+    rawBits = toBits(value)
+
+    magnitude =
+      fromBits(
+        rawBits.high and
+          0x7FFF_FFFF_FFFF_FFFF'u64,
+        rawBits.low,
+      )
+
+    magnitudeBits =
+      toBits(magnitude)
+
+    targetParts =
+      float128DecodeFiniteBits(
+        magnitudeBits.high,
+        magnitudeBits.low,
+      )
+
+    targetBinaryExponent =
+      targetParts.exponent - 112
+
+  var targetRatio =
+    float128ShortestDyadicRatio(
+      targetParts.significand,
+      targetBinaryExponent,
+    )
+
+  var decimalExponent =
+    float128DecimalFloorLog10Estimate(
+      targetParts.exponent,
+    )
+
+  while float128DecimalCompareRatioPowerOfTen(
+    targetRatio.numerator,
+    targetRatio.denominator,
+    decimalExponent,
+  ) < 0:
+    dec decimalExponent
+
+  while float128DecimalCompareRatioPowerOfTen(
+    targetRatio.numerator,
+    targetRatio.denominator,
+    decimalExponent + 1,
+  ) >= 0:
+    inc decimalExponent
+
+  let decimalScale =
+    float128ShortestPowerOfTen(
+      abs(decimalExponent),
+    )
+
+  if decimalExponent >= 0:
+    result.numerator =
+      targetRatio.numerator
+
+    result.denominator =
+      float128ShortestMultiplyBig(
+        targetRatio.denominator,
+        decimalScale,
+      )
+  else:
+    result.numerator =
+      float128ShortestMultiplyBig(
+        targetRatio.numerator,
+        decimalScale,
+      )
+
+    result.denominator =
+      targetRatio.denominator
+
+  let previousValue =
+    nextDown(magnitude)
+
+  var
+    previousSignificand =
+      default(UInt256)
+
+    previousBinaryExponent =
+      targetBinaryExponent
+
+  if not isZero(previousValue):
+    let
+      previousBits =
+        toBits(previousValue)
+
+      previousParts =
+        float128DecodeFiniteBits(
+          previousBits.high,
+          previousBits.low,
+        )
+
+    previousSignificand =
+      previousParts.significand
+
+    previousBinaryExponent =
+      previousParts.exponent - 112
+
+  var
+    nextSignificand: UInt256
+    nextBinaryExponent: int
+
+  let maximumFinite =
+    magnitudeBits.high ==
+      0x7FFE_FFFF_FFFF_FFFF'u64 and
+    magnitudeBits.low ==
+      high(uint64)
+
+  if maximumFinite:
+    nextSignificand =
+      float128UInt256One() shl 112
+
+    nextBinaryExponent =
+      16384 - 112
+  else:
+    let
+      nextValue =
+        nextUp(magnitude)
+
+      nextBits =
+        toBits(nextValue)
+
+      nextParts =
+        float128DecodeFiniteBits(
+          nextBits.high,
+          nextBits.low,
+        )
+
+    nextSignificand =
+      nextParts.significand
+
+    nextBinaryExponent =
+      nextParts.exponent - 112
+
+  var commonBinaryExponent =
+    min(
+      targetBinaryExponent,
+      nextBinaryExponent,
+    )
+
+  if previousSignificand !=
+      default(UInt256):
+    commonBinaryExponent =
+      min(
+        commonBinaryExponent,
+        previousBinaryExponent,
+      )
+
+  let
+    previousAligned =
+      float128ShortestAlignedInteger(
+        previousSignificand,
+        previousBinaryExponent,
+        commonBinaryExponent,
+      )
+
+    targetAligned =
+      float128ShortestAlignedInteger(
+        targetParts.significand,
+        targetBinaryExponent,
+        commonBinaryExponent,
+      )
+
+    nextAligned =
+      float128ShortestAlignedInteger(
+        nextSignificand,
+        nextBinaryExponent,
+        commonBinaryExponent,
+      )
+
+  var
+    lowerNumerator =
+      float128ShortestAddBig(
+        previousAligned,
+        targetAligned,
+      )
+
+    upperNumerator =
+      float128ShortestAddBig(
+        targetAligned,
+        nextAligned,
+      )
+
+    boundaryDenominator =
+      float128ShortestOne()
+
+  let boundaryBinaryExponent =
+    commonBinaryExponent - 1
+
+  if boundaryBinaryExponent >= 0:
+    lowerNumerator =
+      lowerNumerator.float128ShortestShiftLeft(
+        boundaryBinaryExponent,
+      )
+
+    upperNumerator =
+      upperNumerator.float128ShortestShiftLeft(
+        boundaryBinaryExponent,
+      )
+  else:
+    boundaryDenominator =
+      boundaryDenominator.float128ShortestShiftLeft(
+        -boundaryBinaryExponent,
+      )
+
+  if decimalExponent >= 0:
+    boundaryDenominator =
+      float128ShortestMultiplyBig(
+        boundaryDenominator,
+        decimalScale,
+      )
+  else:
+    lowerNumerator =
+      float128ShortestMultiplyBig(
+        lowerNumerator,
+        decimalScale,
+      )
+
+    upperNumerator =
+      float128ShortestMultiplyBig(
+        upperNumerator,
+        decimalScale,
+      )
+
+  result.lowerNumerator =
+    lowerNumerator
+
+  result.upperNumerator =
+    upperNumerator
+
+  result.boundaryDenominator =
+    boundaryDenominator
+
+  result.decimalExponent =
+    decimalExponent
+
+  result.midpointInclusive =
+    (
+      magnitudeBits.low and
+      1'u64
+    ) == 0'u64
+
+
+
+
+
+
+proc float128ShortestNormalizedCandidate(
+    rawDigits: string;
+    candidateExponent: int
+): Float128ShortestCandidate =
+  result.digits = rawDigits
+
+  result.decimalPower =
+    candidateExponent -
+    rawDigits.len +
+    1
+
+  while result.digits.len > 1 and
+      result.digits[^1] == '0':
+    result.digits.setLen(
+      result.digits.len - 1,
+    )
+
+    inc result.decimalPower
+
+  result.significantDigits =
+    result.digits.len
+
+  result.coefficientOdd =
+    (
+      (
+        ord(result.digits[^1]) -
+        ord('0')
+      ) and 1
+    ) != 0
+
+proc float128ShortestRender(
+    candidate: Float128ShortestCandidate
+): string =
+  let
+    digits =
+      candidate.digits
+
+    scientificExponent =
+      digits.len -
+      1 +
+      candidate.decimalPower
+
+  if (
+    -4 <= scientificExponent and
+    scientificExponent < digits.len
+  ):
+    let pointPosition =
+      digits.len +
+      candidate.decimalPower
+
+    if pointPosition <= 0:
+      result = "0."
+
+      for _ in 0 ..< -pointPosition:
+        result.add('0')
+
+      result.add(digits)
+      return
+
+    if pointPosition >= digits.len:
+      result = digits
+
+      for _ in 0 ..< (
+        pointPosition -
+        digits.len
+      ):
+        result.add('0')
+
+      return
+
+    result.add(
+      digits[0 ..< pointPosition]
+    )
+
+    result.add('.')
+
+    result.add(
+      digits[
+        pointPosition ..
+        digits.high
+      ]
+    )
+
+    return
+
+  result.add(digits[0])
+
+  if digits.len > 1:
+    result.add('.')
+    result.add(
+      digits[1 .. digits.high]
+    )
+
+  result.add('e')
+  result.add($scientificExponent)
+
+func float128ShortestFormat(
+    value: Float128
+): string =
+  let bits =
+    toBits(value)
+
+  let negative =
+    (
+      bits.high shr 63
+    ) != 0'u64
+
+  if float128IsNaNBits(
+      bits.high,
+      bits.low,
+  ):
+    result =
+      if negative:
+        "-nan"
+      else:
+        "nan"
+
+    return
+
+  if float128IsInfinityBits(
+      bits.high,
+      bits.low,
+  ):
+    result =
+      if negative:
+        "-inf"
+      else:
+        "inf"
+
+    return
+
+  if float128IsZeroBits(
+      bits.high,
+      bits.low,
+  ):
+    result =
+      if negative:
+        "-0"
+      else:
+        "0"
+
+    return
+
+  let prepared =
+    float128ShortestPrepare(
+      value,
+    )
+
+  var
+    remainder =
+      prepared.numerator.float128ShortestClone(
+      )
+
+    floorCoefficient:
+      Float128DecimalBigUInt
+
+    decimalGridPower =
+      float128ShortestOne()
+
+    digits = ""
+
+  for digitStep in 1 .. 36:
+    var digit = 0
+
+    while float128DecimalCompare(
+      remainder,
+      prepared.denominator,
+    ) >= 0:
+      remainder.float128DecimalSubtractAssign(
+        prepared.denominator,
+      )
+
+      inc digit
+
+    doAssert digit >= 0 and digit <= 9
+
+    floorCoefficient.float128DecimalMultiplySmall(
+      10'u32,
+    )
+
+    floorCoefficient.float128DecimalAddSmall(
+      uint32(digit),
+    )
+
+
+    digits.add(
+      char(
+        ord('0') +
+        digit
+      )
+    )
+
+    let
+      lowerRight =
+        float128ShortestMultiplyBig(
+          prepared.lowerNumerator,
+          decimalGridPower,
+        )
+
+      upperRight =
+        float128ShortestMultiplyBig(
+          prepared.upperNumerator,
+          decimalGridPower,
+        )
+
+      floorLeft =
+        float128ShortestMultiplyBig(
+          floorCoefficient,
+          prepared.boundaryDenominator,
+        )
+
+    var ceilCoefficient =
+      floorCoefficient.float128ShortestClone(
+      )
+
+    ceilCoefficient.float128DecimalAddSmall(
+      1'u32,
+    )
+
+
+    let ceilLeft =
+      float128ShortestMultiplyBig(
+        ceilCoefficient,
+        prepared.boundaryDenominator,
+      )
+
+    let
+      floorLowerComparison =
+        float128DecimalCompare(
+          floorLeft,
+          lowerRight,
+        )
+
+      floorUpperComparison =
+        float128DecimalCompare(
+          floorLeft,
+          upperRight,
+        )
+
+      ceilLowerComparison =
+        float128DecimalCompare(
+          ceilLeft,
+          lowerRight,
+        )
+
+      ceilUpperComparison =
+        float128DecimalCompare(
+          ceilLeft,
+          upperRight,
+        )
+
+      floorValid =
+        (
+          floorLowerComparison > 0 or
+          (
+            floorLowerComparison == 0 and
+            prepared.midpointInclusive
+          )
+        ) and
+        (
+          floorUpperComparison < 0 or
+          (
+            floorUpperComparison == 0 and
+            prepared.midpointInclusive
+          )
+        )
+
+      ceilValid =
+        (
+          ceilLowerComparison > 0 or
+          (
+            ceilLowerComparison == 0 and
+            prepared.midpointInclusive
+          )
+        ) and
+        (
+          ceilUpperComparison < 0 or
+          (
+            ceilUpperComparison == 0 and
+            prepared.midpointInclusive
+          )
+        )
+
+    var
+      floorCandidate:
+        Float128ShortestCandidate
+
+      ceilCandidate:
+        Float128ShortestCandidate
+
+    if floorValid:
+      floorCandidate =
+        float128ShortestNormalizedCandidate(
+          digits,
+          prepared.decimalExponent,
+        )
+
+    if ceilValid:
+      var
+        ceilDigits = digits
+        ceilExponent =
+          prepared.decimalExponent
+
+      ceilDigits.float128DecimalIncrementDigits(
+        ceilExponent,
+      )
+
+      ceilCandidate =
+        float128ShortestNormalizedCandidate(
+          ceilDigits,
+          ceilExponent,
+        )
+
+
+    if floorValid or ceilValid:
+      var selected:
+        Float128ShortestCandidate
+
+      if floorValid and not ceilValid:
+        selected = floorCandidate
+
+      elif ceilValid and not floorValid:
+        selected = ceilCandidate
+
+      elif floorCandidate.significantDigits <
+          ceilCandidate.significantDigits:
+        selected = floorCandidate
+
+      elif ceilCandidate.significantDigits <
+          floorCandidate.significantDigits:
+        selected = ceilCandidate
+
+      else:
+        var doubledRemainder =
+          remainder.float128ShortestClone(
+          )
+
+        doubledRemainder.float128DecimalShiftLeftOne()
+
+
+        let distanceComparison =
+          float128DecimalCompare(
+            doubledRemainder,
+            prepared.denominator,
+          )
+
+        if distanceComparison < 0:
+          selected = floorCandidate
+
+        elif distanceComparison > 0:
+          selected = ceilCandidate
+
+        elif floorCandidate.coefficientOdd !=
+            ceilCandidate.coefficientOdd:
+          if floorCandidate.coefficientOdd:
+            selected = ceilCandidate
+          else:
+            selected = floorCandidate
+
+        else:
+          selected = floorCandidate
+
+
+      result =
+        float128ShortestRender(
+          selected,
+        )
+
+      if negative:
+        result =
+          "-" &
+          result
+
+      return
+
+    remainder.float128DecimalMultiplySmall(
+      10'u32,
+    )
+
+
+    decimalGridPower.float128DecimalMultiplySmall(
+      10'u32,
+    )
+
+
+  raise newException(
+    AssertionDefect,
+    "Float128 shortest formatting exceeded 36 digits",
+  )
+
+func toShortestString*(value: Float128): string =
+  float128ShortestFormat(value)
