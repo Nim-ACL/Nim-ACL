@@ -3368,3 +3368,599 @@ func toScientificString*(
     result.add('+')
 
   result.add($decimalExponent)
+
+# IEEE-style remainder operations for Float128
+const
+  float128RemainderSignMask =
+    0x8000_0000_0000_0000'u64
+  float128RemainderExponentMask =
+    0x7fff'u16
+  float128RemainderFractionHighMask =
+    0x0000_ffff_ffff_ffff'u64
+  float128RemainderQuietNaNMask =
+    0x0000_8000_0000_0000'u64
+  float128RemainderExponentBias =
+    16383
+  float128RemainderMinimumNormalExponent =
+    -16382
+  float128RemainderMinimumSubnormalExponent =
+    -16494
+
+type
+  Float128RemainderDecoded = object
+    significand: UInt256
+    exponent: int
+
+func float128RemainderWordAt(
+    value: UInt256;
+    index: int;
+): uint64 {.inline.} =
+  case index
+  of 0:
+    word64(value, 0)
+  of 1:
+    word64(value, 1)
+  of 2:
+    word64(value, 2)
+  of 3:
+    word64(value, 3)
+  else:
+    0'u64
+
+func float128RemainderBitLength64(
+    value: uint64;
+): int {.inline.} =
+  for bitIndex in countdown(63, 0):
+    if (
+      (
+        value shr bitIndex
+      ) and 1'u64
+    ) != 0'u64:
+      return bitIndex + 1
+
+  0
+
+func float128RemainderTrailingZeroCount64(
+    value: uint64;
+): int {.inline.} =
+  for bitIndex in 0 .. 63:
+    if (
+      (
+        value shr bitIndex
+      ) and 1'u64
+    ) != 0'u64:
+      return bitIndex
+
+  64
+
+func float128RemainderBitLength(
+    value: UInt256;
+): int {.inline.} =
+  for wordIndex in countdown(3, 0):
+    let currentWord =
+      float128RemainderWordAt(
+        value,
+        wordIndex,
+      )
+
+    if currentWord != 0'u64:
+      return (
+        wordIndex * 64 +
+        float128RemainderBitLength64(
+          currentWord,
+        )
+      )
+
+  0
+
+func float128RemainderTrailingZeroCount(
+    value: UInt256;
+): int {.inline.} =
+  for wordIndex in 0 .. 3:
+    let currentWord =
+      float128RemainderWordAt(
+        value,
+        wordIndex,
+      )
+
+    if currentWord != 0'u64:
+      return (
+        wordIndex * 64 +
+        float128RemainderTrailingZeroCount64(
+          currentWord,
+        )
+      )
+
+  0
+
+func float128RemainderCompareScaled(
+    aMagnitude: UInt256;
+    aExponent: int;
+    bMagnitude: UInt256;
+    bExponent: int;
+): int =
+  let
+    aBits =
+      float128RemainderBitLength(
+        aMagnitude,
+      )
+    bBits =
+      float128RemainderBitLength(
+        bMagnitude,
+      )
+
+  if aBits == 0:
+    if bBits == 0:
+      return 0
+
+    return -1
+
+  if bBits == 0:
+    return 1
+
+  let
+    aTop =
+      aExponent + aBits
+    bTop =
+      bExponent + bBits
+
+  if aTop < bTop:
+    return -1
+
+  if aTop > bTop:
+    return 1
+
+  if aExponent >= bExponent:
+    cmp(
+      `shl`(
+        aMagnitude,
+        aExponent - bExponent
+      ),
+      bMagnitude,
+    )
+  else:
+    cmp(
+      aMagnitude,
+      `shl`(
+        bMagnitude,
+        bExponent - aExponent
+      ),
+    )
+
+func float128RemainderSubtractScaled(
+    aMagnitude: UInt256;
+    aExponent: int;
+    bMagnitude: UInt256;
+    bExponent: int;
+): tuple[
+    magnitude: UInt256,
+    exponent: int,
+] =
+  let commonExponent =
+    if aExponent < bExponent:
+      aExponent
+    else:
+      bExponent
+
+  let
+    aAligned =
+      `shl`(
+        aMagnitude,
+        aExponent - commonExponent
+      )
+    bAligned =
+      `shl`(
+        bMagnitude,
+        bExponent - commonExponent
+      )
+
+  doAssert aAligned >= bAligned
+
+  (
+    magnitude:
+      aAligned - bAligned,
+    exponent:
+      commonExponent,
+  )
+
+func float128RemainderReduceMod(
+    value: UInt256;
+    modulus: UInt256;
+): UInt256 =
+  doAssert not isZero(modulus)
+
+  if value < modulus:
+    return value
+
+  var
+    remainder =
+      value
+    shift =
+      float128RemainderBitLength(
+        value,
+      ) -
+      float128RemainderBitLength(
+        modulus,
+      )
+    shiftedModulus =
+      modulus shl shift
+
+  while true:
+    if shiftedModulus <= remainder:
+      remainder =
+        remainder - shiftedModulus
+
+    if shift == 0:
+      break
+
+    shiftedModulus =
+      shiftedModulus shr 1
+
+    dec shift
+
+  remainder
+
+func float128RemainderPowerOfTwoMod(
+    value: UInt256;
+    shift: int;
+    modulus: UInt256;
+): UInt256 =
+  var
+    resultValue =
+      float128RemainderReduceMod(
+        value,
+        modulus,
+      )
+    base =
+      float128RemainderReduceMod(
+        toUInt256(2'u64),
+        modulus,
+      )
+    exponent =
+      shift
+
+  while exponent > 0:
+    if (
+      exponent and 1
+    ) != 0:
+      resultValue =
+        float128RemainderReduceMod(
+          resultValue * base,
+          modulus,
+        )
+
+    exponent =
+      exponent shr 1
+
+    if exponent > 0:
+      base =
+        float128RemainderReduceMod(
+          base * base,
+          modulus,
+        )
+
+  resultValue
+
+func float128RemainderDecodeMagnitude(
+    value: Float128;
+): Float128RemainderDecoded {.inline.} =
+  let
+    bits =
+      toBits(value)
+    exponentField =
+      int(
+        biasedExponent(value)
+      )
+    fraction =
+      fromUInt64Words(
+        0'u64,
+        0'u64,
+        bits.high and
+          float128RemainderFractionHighMask,
+        bits.low,
+      )
+
+  if exponentField == 0:
+    Float128RemainderDecoded(
+      significand:
+        fraction,
+      exponent:
+        float128RemainderMinimumSubnormalExponent,
+    )
+  else:
+    Float128RemainderDecoded(
+      significand:
+        fraction +
+        fromUInt64Words(
+          0'u64,
+          0'u64,
+          0x0001_0000_0000_0000'u64,
+          0'u64,
+        ),
+      exponent:
+        exponentField -
+        float128RemainderExponentBias -
+        112,
+    )
+
+func float128RemainderEncodeExactMagnitude(
+    originalMagnitude: UInt256;
+    originalExponent: int;
+    negative: bool;
+): Float128 =
+  if isZero(originalMagnitude):
+    return fromBits(
+      (
+        if negative:
+          float128RemainderSignMask
+        else:
+          0'u64
+      ),
+      0'u64,
+    )
+
+  let trailingZeroCount =
+    float128RemainderTrailingZeroCount(
+      originalMagnitude,
+    )
+
+  let
+    magnitude =
+      originalMagnitude shr
+        trailingZeroCount
+    exponent =
+      originalExponent +
+      trailingZeroCount
+    bitLength =
+      float128RemainderBitLength(
+        magnitude,
+      )
+    topExponent =
+      exponent +
+      bitLength -
+      1
+
+  doAssert bitLength <= 113
+
+  let signBits =
+    if negative:
+      float128RemainderSignMask
+    else:
+      0'u64
+
+  if topExponent >=
+      float128RemainderMinimumNormalExponent:
+    let
+      significand =
+        `shl`(
+          magnitude,
+          113 - bitLength
+        )
+      exponentField =
+        topExponent +
+        float128RemainderExponentBias
+      fractionHigh =
+        word64(
+          significand,
+          1,
+        ) and
+        float128RemainderFractionHighMask
+      fractionLow =
+        word64(
+          significand,
+          0,
+        )
+
+    doAssert exponentField > 0
+    doAssert exponentField < 0x7fff
+
+    return fromBits(
+      signBits or
+      (
+        `shl`(
+          uint64(exponentField),
+          48,
+        )
+      ) or
+      fractionHigh,
+      fractionLow,
+    )
+
+  let subnormalShift =
+    exponent -
+    float128RemainderMinimumSubnormalExponent
+
+  doAssert subnormalShift >= 0
+
+  let fraction =
+    magnitude shl subnormalShift
+
+  doAssert word64(fraction, 3) == 0'u64
+  doAssert word64(fraction, 2) == 0'u64
+  doAssert (
+    `shr`(
+      word64(fraction, 1),
+      48,
+    )
+  ) == 0'u64
+
+  fromBits(
+    signBits or
+    (
+      word64(
+        fraction,
+        1,
+      ) and
+      float128RemainderFractionHighMask
+    ),
+    word64(
+      fraction,
+      0,
+    ),
+  )
+
+func float128RemainderQuietNaN(
+    value: Float128;
+): Float128 {.inline.} =
+  let bits =
+    toBits(value)
+
+  fromBits(
+    bits.high or
+      float128RemainderQuietNaNMask,
+    bits.low,
+  )
+
+func float128RemainderPreferredNaN(
+    x,
+    y: Float128;
+): Float128 {.inline.} =
+  if isNaN(x):
+    float128RemainderQuietNaN(x)
+  else:
+    float128RemainderQuietNaN(y)
+
+func float128RemainderOperation(
+    x,
+    y: Float128;
+    remainderMode: bool;
+): Float128 =
+  if isNaN(x) or
+      isNaN(y):
+    return float128RemainderPreferredNaN(
+        x,
+        y,
+      )
+
+  if isInfinite(x) or
+      isZero(y):
+    return canonicalQuietNaNFloat128
+
+  if isInfinite(y):
+    return x
+
+  if isZero(x):
+    return x
+
+  let
+    xDecoded =
+      float128RemainderDecodeMagnitude(
+        x,
+      )
+    yDecoded =
+      float128RemainderDecodeMagnitude(
+        y,
+      )
+    xNegative =
+      signBit(x)
+    magnitudeComparison =
+      float128RemainderCompareScaled(
+        xDecoded.significand,
+        xDecoded.exponent,
+        yDecoded.significand,
+        yDecoded.exponent,
+      )
+
+  if magnitudeComparison < 0:
+    if not remainderMode:
+      return x
+
+    let halfComparison =
+      float128RemainderCompareScaled(
+        xDecoded.significand shl 1,
+        xDecoded.exponent,
+        yDecoded.significand,
+        yDecoded.exponent,
+      )
+
+    if halfComparison < 0:
+      return x
+
+    if halfComparison == 0:
+      return x
+
+    let difference =
+      float128RemainderSubtractScaled(
+        yDecoded.significand,
+        yDecoded.exponent,
+        xDecoded.significand,
+        xDecoded.exponent,
+      )
+
+    return float128RemainderEncodeExactMagnitude(
+        difference.magnitude,
+        difference.exponent,
+        not xNegative,
+      )
+
+  doAssert xDecoded.exponent >=
+    yDecoded.exponent
+
+  let
+    alignmentShift =
+      xDecoded.exponent -
+      yDecoded.exponent
+    doubledDivisor =
+      yDecoded.significand shl 1
+    reduced =
+      float128RemainderPowerOfTwoMod(
+        xDecoded.significand,
+        alignmentShift,
+        doubledDivisor,
+      )
+    quotientIsOdd =
+      reduced >=
+        yDecoded.significand
+    floorRemainder =
+      if quotientIsOdd:
+        reduced -
+        yDecoded.significand
+      else:
+        reduced
+
+  if not remainderMode:
+    return float128RemainderEncodeExactMagnitude(
+        floorRemainder,
+        yDecoded.exponent,
+        xNegative,
+      )
+
+  let doubledRemainder =
+    floorRemainder shl 1
+
+  if doubledRemainder <
+      yDecoded.significand:
+    return float128RemainderEncodeExactMagnitude(
+        floorRemainder,
+        yDecoded.exponent,
+        xNegative,
+      )
+
+  if doubledRemainder >
+      yDecoded.significand:
+    return float128RemainderEncodeExactMagnitude(
+        yDecoded.significand -
+        floorRemainder,
+        yDecoded.exponent,
+        not xNegative,
+      )
+
+  if not quotientIsOdd:
+    float128RemainderEncodeExactMagnitude(
+        floorRemainder,
+        yDecoded.exponent,
+        xNegative,
+      )
+  else:
+    float128RemainderEncodeExactMagnitude(
+        yDecoded.significand -
+        floorRemainder,
+        yDecoded.exponent,
+        not xNegative,
+      )
+
+func remainder*(x, y: Float128): Float128 =
+  float128RemainderOperation(x, y, true)
+
+func fmod*(x, y: Float128): Float128 =
+  float128RemainderOperation(x, y, false)
