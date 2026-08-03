@@ -1,6 +1,6 @@
 ## Project-local binary256-style raw representation.
 ##
-## This core packet intentionally provides only:
+## This module provides:
 ## - exact raw-bit construction and decomposition
 ## - sign, exponent and fraction extraction
 ## - encoding classification
@@ -8,7 +8,9 @@
 ## - sign manipulation
 ## - total ordering and adjacent-value operations
 ##
-## Arithmetic, conversions and formatting are intentionally deferred.
+## Multiplication, division, conversions and formatting are intentionally deferred.
+
+import atcoder/extra/numeric/internal/limbs
 
 const
   Float256ExponentBits* = 19
@@ -569,3 +571,561 @@ func infinityFloat256*(
     negativeInfinityFloat256
   else:
     positiveInfinityFloat256
+
+# ----------------------------------------------------------------------
+# Project-local binary256-style addition and subtraction
+# ----------------------------------------------------------------------
+
+type
+  Float256FiniteParts = object
+    sign: bool
+    exponent: int
+    significand: UInt512Limbs
+
+func float256FiniteParts(
+    value: Float256,
+): Float256FiniteParts =
+  result.sign =
+    signBit(value)
+
+  let exponentField =
+    int(biasedExponent(value))
+
+  result.significand[0] =
+    fractionLowBits(value)
+
+  result.significand[1] =
+    fractionWord1Bits(value)
+
+  result.significand[2] =
+    fractionWord2Bits(value)
+
+  result.significand[3] =
+    fractionHighBits(value)
+
+  if exponentField == 0:
+    var highest =
+      -1
+
+    for limbIndex in countdown(3, 0):
+      if result.significand[limbIndex] == 0'u64:
+        continue
+
+      for bitIndex in countdown(63, 0):
+        if (
+          result.significand[limbIndex] and
+          (1'u64 shl bitIndex)
+        ) != 0'u64:
+          highest =
+            limbIndex * 64 +
+            bitIndex
+          break
+
+      if highest >= 0:
+        break
+
+    let normalizationShift =
+      Float256FractionBits -
+      highest
+
+    result.significand =
+      shiftLeft8(
+        result.significand,
+        normalizationShift,
+      )
+
+    result.exponent =
+      1 -
+      Float256ExponentBias -
+      normalizationShift
+  else:
+    result.significand[3] =
+      result.significand[3] or
+      (1'u64 shl 44)
+
+    result.exponent =
+      exponentField -
+      Float256ExponentBias
+
+func float256ShiftRightJam(
+    value: UInt512Limbs;
+    distance: int,
+): UInt512Limbs =
+  var nonzero =
+    false
+
+  for limb in value:
+    if limb != 0'u64:
+      nonzero =
+        true
+      break
+
+  if not nonzero:
+    return
+
+  if distance <= 0:
+    return value
+
+  if distance >= 512:
+    result[0] =
+      1'u64
+    return
+
+  result =
+    shiftRight8(
+      value,
+      distance,
+    )
+
+  let restored =
+    shiftLeft8(
+      result,
+      distance,
+    )
+
+  if compare8(
+      restored,
+      value,
+  ) != 0:
+    result[0] =
+      result[0] or
+      1'u64
+
+func float256RoundPack(
+    sign: bool;
+    sourceExponent: int;
+    sourceExtended: UInt512Limbs,
+): Float256 =
+  let
+    minimumExponent =
+      1 -
+      Float256ExponentBias
+
+    maximumExponent =
+      int(float256MaxBiasedExponent) -
+      1 -
+      Float256ExponentBias
+
+    signBits =
+      if sign:
+        float256SignMask
+      else:
+        0'u64
+
+    zero =
+      default(UInt512Limbs)
+
+  var one =
+    default(UInt512Limbs)
+
+  one[0] =
+    1'u64
+
+  let
+    hiddenBit =
+      shiftLeft8(
+        one,
+        Float256FractionBits,
+      )
+
+    carryBit =
+      shiftLeft8(
+        one,
+        Float256PrecisionBits,
+      )
+
+  if compare8(
+      sourceExtended,
+      zero,
+  ) == 0:
+    return fromBits(
+      signBits,
+      0'u64,
+      0'u64,
+      0'u64,
+    )
+
+  var
+    exponent =
+      sourceExponent
+
+    extended =
+      sourceExtended
+
+  if exponent < minimumExponent:
+    extended =
+      float256ShiftRightJam(
+        extended,
+        minimumExponent -
+          exponent,
+      )
+
+    exponent =
+      minimumExponent
+
+  var retained =
+    shiftRight8(
+      extended,
+      3,
+    )
+
+  let rounding =
+    guardRoundSticky8(
+      extended,
+      3,
+    )
+
+  if rounding.guard and
+      (
+        rounding.roundBit or
+        rounding.sticky or
+        ((retained[0] and 1'u64) != 0'u64)
+      ):
+    let incremented =
+      add8(
+        retained,
+        one,
+      )
+
+    doAssert not incremented.carry
+
+    retained =
+      incremented.value
+
+  if compare8(
+      retained,
+      carryBit,
+  ) >= 0:
+    retained =
+      shiftRight8(
+        retained,
+        1,
+      )
+
+    inc exponent
+
+  if exponent > maximumExponent:
+    return fromBits(
+      signBits or
+        float256ExponentMask,
+      0'u64,
+      0'u64,
+      0'u64,
+    )
+
+  if compare8(
+      retained,
+      zero,
+  ) == 0:
+    return fromBits(
+      signBits,
+      0'u64,
+      0'u64,
+      0'u64,
+    )
+
+  if exponent == minimumExponent and
+      compare8(
+        retained,
+        hiddenBit,
+      ) < 0:
+    return fromBits(
+      signBits or
+        (
+          retained[3] and
+          float256FractionHighMask
+        ),
+      retained[2],
+      retained[1],
+      retained[0],
+    )
+
+  let fractionResult =
+    sub8(
+      retained,
+      hiddenBit,
+    )
+
+  doAssert not fractionResult.borrow
+
+  let
+    fraction =
+      fractionResult.value
+
+    exponentField =
+      uint64(
+        exponent +
+        Float256ExponentBias
+      )
+
+  fromBits(
+    signBits or
+      (exponentField shl 44) or
+      (
+        fraction[3] and
+        float256FractionHighMask
+      ),
+    fraction[2],
+    fraction[1],
+    fraction[0],
+  )
+
+func float256AddSubFinite(
+    lhs,
+    rhs: Float256FiniteParts,
+): Float256 =
+  var
+    larger =
+      lhs
+
+    smaller =
+      rhs
+
+  if larger.exponent < smaller.exponent or
+      (
+        larger.exponent == smaller.exponent and
+        compare8(
+          larger.significand,
+          smaller.significand,
+        ) < 0
+      ):
+    swap(
+      larger,
+      smaller,
+    )
+
+  let
+    exponentDifference =
+      larger.exponent -
+      smaller.exponent
+
+    largerExtended =
+      shiftLeft8(
+        larger.significand,
+        3,
+      )
+
+    smallerExtended =
+      float256ShiftRightJam(
+        shiftLeft8(
+          smaller.significand,
+          3,
+        ),
+        exponentDifference,
+      )
+
+  if larger.sign == smaller.sign:
+    let addition =
+      add8(
+        largerExtended,
+        smallerExtended,
+      )
+
+    doAssert not addition.carry
+
+    var
+      sum =
+        addition.value
+
+      exponent =
+        larger.exponent
+
+      highest =
+        -1
+
+    for limbIndex in countdown(7, 0):
+      if sum[limbIndex] == 0'u64:
+        continue
+
+      for bitIndex in countdown(63, 0):
+        if (
+          sum[limbIndex] and
+          (1'u64 shl bitIndex)
+        ) != 0'u64:
+          highest =
+            limbIndex * 64 +
+            bitIndex
+          break
+
+      if highest >= 0:
+        break
+
+    let targetHighest =
+      Float256FractionBits +
+      3
+
+    if highest > targetHighest:
+      let shift =
+        highest -
+        targetHighest
+
+      sum =
+        float256ShiftRightJam(
+          sum,
+          shift,
+        )
+
+      exponent +=
+        shift
+
+    return float256RoundPack(
+      larger.sign,
+      exponent,
+      sum,
+    )
+
+  let subtraction =
+    sub8(
+      largerExtended,
+      smallerExtended,
+    )
+
+  doAssert not subtraction.borrow
+
+  var difference =
+    subtraction.value
+
+  if compare8(
+      difference,
+      default(UInt512Limbs),
+  ) == 0:
+    return positiveZeroFloat256
+
+  var
+    exponent =
+      larger.exponent
+
+    highest =
+      -1
+
+  for limbIndex in countdown(7, 0):
+    if difference[limbIndex] == 0'u64:
+      continue
+
+    for bitIndex in countdown(63, 0):
+      if (
+        difference[limbIndex] and
+        (1'u64 shl bitIndex)
+      ) != 0'u64:
+        highest =
+          limbIndex * 64 +
+          bitIndex
+        break
+
+    if highest >= 0:
+      break
+
+  let targetHighest =
+    Float256FractionBits +
+    3
+
+  if highest < targetHighest:
+    let shift =
+      targetHighest -
+      highest
+
+    difference =
+      shiftLeft8(
+        difference,
+        shift,
+      )
+
+    exponent -=
+      shift
+
+  float256RoundPack(
+    larger.sign,
+    exponent,
+    difference,
+  )
+
+func float256AddSub(
+    lhs,
+    rhs: Float256;
+    subtract: bool,
+): Float256 =
+  if isNaN(lhs):
+    return float256QuietNaN(lhs)
+
+  if isNaN(rhs):
+    return float256QuietNaN(rhs)
+
+  let effectiveRhs =
+    if subtract:
+      negateSign(rhs)
+    else:
+      rhs
+
+  let
+    lhsInfinity =
+      isInfinite(lhs)
+
+    rhsInfinity =
+      isInfinite(effectiveRhs)
+
+  if lhsInfinity and
+      rhsInfinity:
+    if signBit(lhs) !=
+        signBit(effectiveRhs):
+      return canonicalQuietNaNFloat256
+
+    return lhs
+
+  if lhsInfinity:
+    return lhs
+
+  if rhsInfinity:
+    return effectiveRhs
+
+  let
+    lhsZero =
+      isZero(lhs)
+
+    rhsZero =
+      isZero(effectiveRhs)
+
+  if lhsZero and
+      rhsZero:
+    if signBit(lhs) ==
+        signBit(effectiveRhs):
+      return zeroFloat256(
+        signBit(lhs)
+      )
+
+    return positiveZeroFloat256
+
+  if lhsZero:
+    return effectiveRhs
+
+  if rhsZero:
+    return lhs
+
+  float256AddSubFinite(
+    float256FiniteParts(lhs),
+    float256FiniteParts(effectiveRhs),
+  )
+
+func `-`*(
+    value: Float256,
+): Float256 {.inline.} =
+  negateSign(value)
+
+func `+`*(
+    lhs,
+    rhs: Float256,
+): Float256 =
+  float256AddSub(
+    lhs,
+    rhs,
+    false,
+  )
+
+func `-`*(
+    lhs,
+    rhs: Float256,
+): Float256 =
+  float256AddSub(
+    lhs,
+    rhs,
+    true,
+  )
