@@ -8,9 +8,10 @@
 ## - sign manipulation
 ## - total ordering and adjacent-value operations
 ##
-## Multiplication, division, conversions and formatting are intentionally deferred.
+## Division, conversions and formatting are intentionally deferred.
 
 import atcoder/extra/numeric/internal/limbs
+import atcoder/extra/numeric/internal/wide_mul
 
 const
   Float256ExponentBits* = 19
@@ -1128,4 +1129,155 @@ func `-`*(
     lhs,
     rhs,
     true,
+  )
+
+# ----------------------------------------------------------------------
+# Project-local binary256-style multiplication
+# ----------------------------------------------------------------------
+
+func float256MultiplySignificand(
+    lhs,
+    rhs: UInt512Limbs,
+): UInt512Limbs =
+  var
+    lhs256 =
+      default(UInt256Limbs)
+
+    rhs256 =
+      default(UInt256Limbs)
+
+  for index in 0 ..< 4:
+    lhs256[index] =
+      lhs[index]
+
+    rhs256[index] =
+      rhs[index]
+
+  multiplyWide4x4(
+    lhs256,
+    rhs256,
+  )
+
+func float256MultiplyFinite(
+    lhs,
+    rhs: Float256FiniteParts,
+): Float256 =
+  let product =
+    float256MultiplySignificand(
+      lhs.significand,
+      rhs.significand,
+    )
+
+  var highest =
+    -1
+
+  for limbIndex in countdown(7, 0):
+    if product[limbIndex] == 0'u64:
+      continue
+
+    for bitIndex in countdown(63, 0):
+      if (
+        product[limbIndex] and
+        (1'u64 shl bitIndex)
+      ) != 0'u64:
+        highest =
+          limbIndex * 64 +
+          bitIndex
+        break
+
+    if highest >= 0:
+      break
+
+  doAssert highest == 472 or
+    highest == 473
+
+  let
+    normalizationShift =
+      highest -
+      (
+        Float256FractionBits +
+        3
+      )
+
+    extended =
+      float256ShiftRightJam(
+        product,
+        normalizationShift,
+      )
+
+    resultExponent =
+      lhs.exponent +
+      rhs.exponent +
+      highest -
+      (
+        2 *
+        Float256FractionBits
+      )
+
+  float256RoundPack(
+    lhs.sign xor rhs.sign,
+    resultExponent,
+    extended,
+  )
+
+func float256Multiply(
+    lhs,
+    rhs: Float256,
+): Float256 =
+  if isNaN(lhs):
+    return float256QuietNaN(lhs)
+
+  if isNaN(rhs):
+    return float256QuietNaN(rhs)
+
+  let
+    resultSign =
+      signBit(lhs) xor
+      signBit(rhs)
+
+    lhsInfinity =
+      isInfinite(lhs)
+
+    rhsInfinity =
+      isInfinite(rhs)
+
+    lhsZero =
+      isZero(lhs)
+
+    rhsZero =
+      isZero(rhs)
+
+  if (
+    lhsInfinity and
+    rhsZero
+  ) or (
+    rhsInfinity and
+    lhsZero
+  ):
+    return canonicalQuietNaNFloat256
+
+  if lhsInfinity or
+      rhsInfinity:
+    return infinityFloat256(
+      resultSign
+    )
+
+  if lhsZero or
+      rhsZero:
+    return zeroFloat256(
+      resultSign
+    )
+
+  float256MultiplyFinite(
+    float256FiniteParts(lhs),
+    float256FiniteParts(rhs),
+  )
+
+func `*`*(
+    lhs,
+    rhs: Float256,
+): Float256 =
+  float256Multiply(
+    lhs,
+    rhs,
   )
