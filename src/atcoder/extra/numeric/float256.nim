@@ -8,7 +8,8 @@
 ## - sign manipulation
 ## - total ordering and adjacent-value operations
 ##
-## Conversions and formatting are intentionally deferred.
+## Native float32 / float64 conversion is available.
+## Integer conversion, Float128 interop, parsing and formatting remain deferred.
 
 import atcoder/extra/numeric/internal/limbs
 import atcoder/extra/numeric/internal/wide_mul
@@ -573,6 +574,667 @@ func infinityFloat256*(
     negativeInfinityFloat256
   else:
     positiveInfinityFloat256
+
+
+# ----------------------------------------------------------------------
+# Exact native binary32 / binary64 conversion
+# ----------------------------------------------------------------------
+
+type
+  Float256NativeConversionLimbs =
+    array[4, uint64]
+
+func float256NativeSourceHighestBit32(
+    value: uint32,
+): int {.inline.} =
+  for index in countdown(31, 0):
+    if (
+      (
+        value shr index
+      ) and
+      1'u32
+    ) != 0'u32:
+      return index
+
+  -1
+
+func float256NativeSourceHighestBit64(
+    value: uint64,
+): int {.inline.} =
+  for index in countdown(63, 0):
+    if (
+      (
+        value shr index
+      ) and
+      1'u64
+    ) != 0'u64:
+      return index
+
+  -1
+
+func float256PackNativeFraction(
+    value: uint64,
+    bitWidth: int,
+): tuple[
+    word3,
+    word2: uint64,
+] {.inline.} =
+  if bitWidth <= 0:
+    return (
+      word3: 0'u64,
+      word2: 0'u64,
+    )
+
+  doAssert bitWidth <= 64
+
+  if bitWidth <= 44:
+    return (
+      word3:
+        value shl
+        (
+          44 -
+          bitWidth
+        ),
+      word2: 0'u64,
+    )
+
+  let spill =
+    bitWidth -
+    44
+
+  (
+    word3:
+      value shr spill,
+    word2:
+      value shl
+      (
+        64 -
+        spill
+      ),
+  )
+
+func toFloat256*(
+    value: float32,
+): Float256 =
+  ## Converts an IEEE 754 binary32 value exactly to binary256.
+  ##
+  ## NaN sign, quiet/signaling state and payload bits are preserved by
+  ## left-aligning the binary32 fraction in the binary256 fraction.
+
+  let
+    sourceBits =
+      cast[uint32](value)
+
+    sourceSign =
+      uint64(
+        sourceBits shr 31
+      ) shl 63
+
+    sourceExponent =
+      (
+        sourceBits shr 23
+      ) and
+      0xFF'u32
+
+    sourceFraction =
+      sourceBits and
+      0x007F_FFFF'u32
+
+  if sourceExponent == 0'u32:
+    if sourceFraction == 0'u32:
+      return fromBits(
+        sourceSign,
+        0'u64,
+        0'u64,
+        0'u64,
+      )
+
+    let
+      highestBit =
+        float256NativeSourceHighestBit32(
+          sourceFraction
+        )
+
+      targetExponent =
+        uint64(
+          highestBit +
+          261994
+        )
+
+      remainder =
+        sourceFraction xor
+        (
+          1'u32 shl
+          highestBit
+        )
+
+      packed =
+        float256PackNativeFraction(
+          uint64(remainder),
+          highestBit,
+        )
+
+    return fromBits(
+      sourceSign or
+        (
+          targetExponent shl 44
+        ) or
+        packed.word3,
+      packed.word2,
+      0'u64,
+      0'u64,
+    )
+
+  let
+    targetExponent =
+      if sourceExponent == 0xFF'u32:
+        0x0007_FFFF'u64
+      else:
+        uint64(sourceExponent) +
+          262016'u64
+
+    packed =
+      float256PackNativeFraction(
+        uint64(sourceFraction),
+        23,
+      )
+
+  fromBits(
+    sourceSign or
+      (
+        targetExponent shl 44
+      ) or
+      packed.word3,
+    packed.word2,
+    0'u64,
+    0'u64,
+  )
+
+func toFloat256*(
+    value: float64,
+): Float256 =
+  ## Converts an IEEE 754 binary64 value exactly to binary256.
+  ##
+  ## NaN sign, quiet/signaling state and payload bits are preserved by
+  ## left-aligning the binary64 fraction in the binary256 fraction.
+
+  let
+    sourceBits =
+      cast[uint64](value)
+
+    sourceSign =
+      sourceBits and
+      0x8000_0000_0000_0000'u64
+
+    sourceExponent =
+      (
+        sourceBits shr 52
+      ) and
+      0x7FF'u64
+
+    sourceFraction =
+      sourceBits and
+      0x000F_FFFF_FFFF_FFFF'u64
+
+  if sourceExponent == 0'u64:
+    if sourceFraction == 0'u64:
+      return fromBits(
+        sourceSign,
+        0'u64,
+        0'u64,
+        0'u64,
+      )
+
+    let
+      highestBit =
+        float256NativeSourceHighestBit64(
+          sourceFraction
+        )
+
+      targetExponent =
+        uint64(
+          highestBit +
+          261069
+        )
+
+      remainder =
+        sourceFraction xor
+        (
+          1'u64 shl
+          highestBit
+        )
+
+      packed =
+        float256PackNativeFraction(
+          remainder,
+          highestBit,
+        )
+
+    return fromBits(
+      sourceSign or
+        (
+          targetExponent shl 44
+        ) or
+        packed.word3,
+      packed.word2,
+      0'u64,
+      0'u64,
+    )
+
+  let
+    targetExponent =
+      if sourceExponent == 0x7FF'u64:
+        0x0007_FFFF'u64
+      else:
+        sourceExponent +
+          261120'u64
+
+    packed =
+      float256PackNativeFraction(
+        sourceFraction,
+        52,
+      )
+
+  fromBits(
+    sourceSign or
+      (
+        targetExponent shl 44
+      ) or
+      packed.word3,
+    packed.word2,
+    0'u64,
+    0'u64,
+  )
+
+func float256NativeBit(
+    limbs: Float256NativeConversionLimbs,
+    index: int,
+): bool {.inline.} =
+  if index < 0 or
+      index >= 256:
+    return false
+
+  let
+    limbIndex =
+      index shr 6
+
+    bitIndex =
+      index and 63
+
+  (
+    (
+      limbs[limbIndex] shr
+      bitIndex
+    ) and
+    1'u64
+  ) != 0'u64
+
+func float256NativeAnyBitsBelow(
+    limbs: Float256NativeConversionLimbs,
+    highExclusive: int,
+): bool {.inline.} =
+  if highExclusive <= 0:
+    return false
+
+  let limit =
+    min(
+      highExclusive,
+      256,
+    )
+
+  for index in 0 ..< limit:
+    if float256NativeBit(
+        limbs,
+        index,
+    ):
+      return true
+
+  false
+
+func float256NativeHighestBit(
+    limbs: Float256NativeConversionLimbs,
+): int {.inline.} =
+  for limbIndex in countdown(3, 0):
+    if limbs[limbIndex] == 0'u64:
+      continue
+
+    for bitIndex in countdown(63, 0):
+      if (
+        limbs[limbIndex] and
+        (
+          1'u64 shl bitIndex
+        )
+      ) != 0'u64:
+        return
+          limbIndex * 64 +
+          bitIndex
+
+  -1
+
+func float256NativeShiftRightToUInt64(
+    limbs: Float256NativeConversionLimbs,
+    shift: int,
+): uint64 {.inline.} =
+  for destinationBit in 0 ..< 64:
+    let sourceBit =
+      destinationBit +
+      shift
+
+    if float256NativeBit(
+        limbs,
+        sourceBit,
+    ):
+      result =
+        result or
+        (
+          1'u64 shl
+          destinationBit
+        )
+
+func float256NativeRoundShiftToUInt64(
+    limbs: Float256NativeConversionLimbs,
+    shift: int,
+): uint64 {.inline.} =
+  if shift <= 0:
+    return
+      float256NativeShiftRightToUInt64(
+        limbs,
+        shift,
+      )
+
+  if shift > 256:
+    return 0'u64
+
+  let
+    retained =
+      float256NativeShiftRightToUInt64(
+        limbs,
+        shift,
+      )
+
+    guard =
+      float256NativeBit(
+        limbs,
+        shift - 1,
+      )
+
+    sticky =
+      float256NativeAnyBitsBelow(
+        limbs,
+        shift - 1,
+      )
+
+  if guard and
+      (
+        sticky or
+        (
+          retained and
+          1'u64
+        ) != 0'u64
+      ):
+    return retained + 1'u64
+
+  retained
+
+func float256ToNativeBinaryBits(
+    value: Float256,
+    targetFractionBits: int,
+    targetBias: int,
+    targetMinimumExponent: int,
+    targetMaximumExponent: int,
+    targetSignShift: int,
+    targetExponentAllOnes: uint64,
+): uint64 =
+  let
+    source =
+      toBits(value)
+
+    sourceSign =
+      source.word3 shr 63
+
+    sourceExponent =
+      int(
+        (
+          source.word3 shr 44
+        ) and
+        0x0007_FFFF'u64
+      )
+
+    sourceFraction:
+      Float256NativeConversionLimbs =
+        [
+          source.word0,
+          source.word1,
+          source.word2,
+          source.word3 and
+            0x0000_0FFF_FFFF_FFFF'u64,
+        ]
+
+    targetSign =
+      sourceSign shl
+      targetSignShift
+
+  if sourceExponent == 0x0007_FFFF:
+    if sourceFraction[0] == 0'u64 and
+        sourceFraction[1] == 0'u64 and
+        sourceFraction[2] == 0'u64 and
+        sourceFraction[3] == 0'u64:
+      return
+        targetSign or
+        (
+          targetExponentAllOnes shl
+          targetFractionBits
+        )
+
+    let payloadShift =
+      Float256FractionBits -
+      targetFractionBits
+
+    var targetFraction =
+      float256NativeShiftRightToUInt64(
+        sourceFraction,
+        payloadShift,
+      )
+
+    if targetFraction == 0'u64:
+      targetFraction = 1'u64
+
+    return
+      targetSign or
+      (
+        targetExponentAllOnes shl
+        targetFractionBits
+      ) or
+      targetFraction
+
+  if sourceExponent == 0 and
+      sourceFraction[0] == 0'u64 and
+      sourceFraction[1] == 0'u64 and
+      sourceFraction[2] == 0'u64 and
+      sourceFraction[3] == 0'u64:
+    return targetSign
+
+  var
+    significand =
+      sourceFraction
+
+    highestBit: int
+    binaryExponent: int
+
+  if sourceExponent == 0:
+    highestBit =
+      float256NativeHighestBit(
+        significand
+      )
+
+    binaryExponent =
+      1 -
+      Float256ExponentBias -
+      Float256FractionBits
+
+  else:
+    significand[3] =
+      significand[3] or
+      (
+        1'u64 shl 44
+      )
+
+    highestBit =
+      Float256FractionBits
+
+    binaryExponent =
+      sourceExponent -
+      Float256ExponentBias -
+      Float256FractionBits
+
+  let resultExponent =
+    highestBit +
+    binaryExponent
+
+  if resultExponent >
+      targetMaximumExponent:
+    return
+      targetSign or
+      (
+        targetExponentAllOnes shl
+        targetFractionBits
+      )
+
+  let
+    targetHiddenBit =
+      1'u64 shl
+      targetFractionBits
+
+    targetSignificandLimit =
+      targetHiddenBit shl 1
+
+  if resultExponent >=
+      targetMinimumExponent:
+    let shift =
+      highestBit -
+      targetFractionBits
+
+    var
+      roundedSignificand =
+        float256NativeRoundShiftToUInt64(
+          significand,
+          shift,
+        )
+
+      targetExponent =
+        resultExponent
+
+    if roundedSignificand >=
+        targetSignificandLimit:
+      roundedSignificand =
+        roundedSignificand shr 1
+
+      inc targetExponent
+
+      if targetExponent >
+          targetMaximumExponent:
+        return
+          targetSign or
+          (
+            targetExponentAllOnes shl
+            targetFractionBits
+          )
+
+    let
+      targetFraction =
+        roundedSignificand and
+        (
+          targetHiddenBit -
+          1'u64
+        )
+
+      targetExponentField =
+        uint64(
+          targetExponent +
+          targetBias
+        )
+
+    return
+      targetSign or
+      (
+        targetExponentField shl
+        targetFractionBits
+      ) or
+      targetFraction
+
+  let
+    targetQuantumExponent =
+      targetMinimumExponent -
+      targetFractionBits
+
+    shift =
+      targetQuantumExponent -
+      binaryExponent
+
+    roundedFraction =
+      float256NativeRoundShiftToUInt64(
+        significand,
+        shift,
+      )
+
+  if roundedFraction == 0'u64:
+    return targetSign
+
+  if roundedFraction >=
+      targetHiddenBit:
+    return
+      targetSign or
+      (
+        1'u64 shl
+        targetFractionBits
+      )
+
+  targetSign or
+    roundedFraction
+
+func toFloat32*(
+    value: Float256,
+): float32 =
+  ## Converts binary256 to binary32 using roundTiesToEven.
+  ##
+  ## Signed zero and infinity are preserved. NaN sign and the most
+  ## significant representable payload bits are retained.
+
+  let bits =
+    uint32(
+      float256ToNativeBinaryBits(
+        value,
+        23,
+        127,
+        -126,
+        127,
+        31,
+        0xFF'u64,
+      )
+    )
+
+  cast[float32](bits)
+
+func toFloat64*(
+    value: Float256,
+): float64 =
+  ## Converts binary256 to binary64 using roundTiesToEven.
+  ##
+  ## Signed zero and infinity are preserved. NaN sign and the most
+  ## significant representable payload bits are retained.
+
+  let bits =
+    float256ToNativeBinaryBits(
+      value,
+      52,
+      1023,
+      -1022,
+      1023,
+      63,
+      0x7FF'u64,
+    )
+
+  cast[float64](bits)
 
 # ----------------------------------------------------------------------
 # Project-local binary256-style addition and subtraction
