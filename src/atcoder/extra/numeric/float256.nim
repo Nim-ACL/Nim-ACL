@@ -8,10 +8,11 @@
 ## - sign manipulation
 ## - total ordering and adjacent-value operations
 ##
-## Division, conversions and formatting are intentionally deferred.
+## Conversions and formatting are intentionally deferred.
 
 import atcoder/extra/numeric/internal/limbs
 import atcoder/extra/numeric/internal/wide_mul
+import atcoder/extra/numeric/internal/wide_div
 
 const
   Float256ExponentBits* = 19
@@ -1278,6 +1279,140 @@ func `*`*(
     rhs: Float256,
 ): Float256 =
   float256Multiply(
+    lhs,
+    rhs,
+  )
+
+
+# ----------------------------------------------------------------------
+# Project-local binary256-style division
+# ----------------------------------------------------------------------
+
+func float256DivideFinite(
+    lhs,
+    rhs: Float256FiniteParts,
+): Float256 =
+  var denominator =
+    default(UInt256Limbs)
+
+  for index in 0 ..< 4:
+    denominator[index] =
+      rhs.significand[index]
+
+  var
+    exponent =
+      lhs.exponent -
+      rhs.exponent
+
+    numerator =
+      default(UInt512Limbs)
+
+  if compare8(
+      lhs.significand,
+      rhs.significand,
+  ) >= 0:
+    numerator =
+      shiftLeft8(
+        lhs.significand,
+        239,
+      )
+  else:
+    numerator =
+      shiftLeft8(
+        lhs.significand,
+        240,
+      )
+
+    dec exponent
+
+  let division =
+    divRemWide8x4(
+      numerator,
+      denominator,
+    )
+
+  var quotient =
+    division.quotient
+
+  for limb in division.remainder:
+    if limb != 0'u64:
+      quotient[0] =
+        quotient[0] or
+        1'u64
+      break
+
+  float256RoundPack(
+    lhs.sign xor rhs.sign,
+    exponent,
+    quotient,
+  )
+
+func float256Divide(
+    lhs,
+    rhs: Float256,
+): Float256 =
+  if isNaN(lhs):
+    return float256QuietNaN(lhs)
+
+  if isNaN(rhs):
+    return float256QuietNaN(rhs)
+
+  let
+    resultSign =
+      signBit(lhs) xor
+      signBit(rhs)
+
+    lhsInfinity =
+      isInfinite(lhs)
+
+    rhsInfinity =
+      isInfinite(rhs)
+
+    lhsZero =
+      isZero(lhs)
+
+    rhsZero =
+      isZero(rhs)
+
+  if (
+    lhsInfinity and
+    rhsInfinity
+  ) or (
+    lhsZero and
+    rhsZero
+  ):
+    return canonicalQuietNaNFloat256
+
+  if lhsInfinity:
+    return infinityFloat256(
+      resultSign
+    )
+
+  if rhsInfinity:
+    return zeroFloat256(
+      resultSign
+    )
+
+  if rhsZero:
+    return infinityFloat256(
+      resultSign
+    )
+
+  if lhsZero:
+    return zeroFloat256(
+      resultSign
+    )
+
+  float256DivideFinite(
+    float256FiniteParts(lhs),
+    float256FiniteParts(rhs),
+  )
+
+func `/`*(
+    lhs,
+    rhs: Float256,
+): Float256 =
+  float256Divide(
     lhs,
     rhs,
   )
