@@ -8,9 +8,10 @@
 ## - sign manipulation
 ## - total ordering and adjacent-value operations
 ##
-## Native float32 / float64 conversion is available.
-## Integer conversion, Float128 interop, parsing and formatting remain deferred.
+## Native float32 / float64 and Float128 conversion is available.
+## Integer conversion, parsing and formatting remain deferred.
 
+import atcoder/extra/numeric/float128 as binary128
 import atcoder/extra/numeric/internal/limbs
 import atcoder/extra/numeric/internal/wide_mul
 import atcoder/extra/numeric/internal/wide_div
@@ -1235,6 +1236,511 @@ func toFloat64*(
     )
 
   cast[float64](bits)
+
+
+# ----------------------------------------------------------------------
+# Exact Float128 / Float256 conversion
+# ----------------------------------------------------------------------
+
+type
+  Float256Float128Pair =
+    tuple[
+      high,
+      low: uint64,
+    ]
+
+func float128FractionToFloat256Words(
+    sourceHigh,
+    sourceLow: uint64,
+    shift: int,
+    skipSourceBit: int = -1,
+): Float256NativeConversionLimbs {.inline.} =
+  for sourceBit in 0 ..<
+      binary128.Float128FractionBits:
+    if sourceBit == skipSourceBit:
+      continue
+
+    let bitPresent =
+      if sourceBit < 64:
+        (
+          (
+            sourceLow shr
+            sourceBit
+          ) and
+          1'u64
+        ) != 0'u64
+      else:
+        (
+          (
+            sourceHigh shr
+            (
+              sourceBit -
+              64
+            )
+          ) and
+          1'u64
+        ) != 0'u64
+
+    if not bitPresent:
+      continue
+
+    let targetBit =
+      sourceBit +
+      shift
+
+    doAssert targetBit >= 0
+    doAssert targetBit <
+      Float256FractionBits
+
+    result[
+      targetBit shr 6
+    ] =
+      result[
+        targetBit shr 6
+      ] or
+      (
+        1'u64 shl
+        (
+          targetBit and 63
+        )
+      )
+
+func toFloat256*(
+    value: binary128.Float128,
+): Float256 =
+  ## Converts an IEEE 754 binary128 value exactly to binary256.
+  ##
+  ## Signed zero, infinity, NaN sign, quiet/signaling state and every
+  ## binary128 payload bit are preserved.
+
+  let
+    source =
+      binary128.toBits(value)
+
+    sourceSign =
+      source.high and
+      0x8000_0000_0000_0000'u64
+
+    sourceExponent =
+      (
+        source.high shr 48
+      ) and
+      0x7FFF'u64
+
+    sourceFractionHigh =
+      source.high and
+      0x0000_FFFF_FFFF_FFFF'u64
+
+    sourceFractionLow =
+      source.low
+
+  if sourceExponent == 0'u64:
+    if sourceFractionHigh == 0'u64 and
+        sourceFractionLow == 0'u64:
+      return fromBits(
+        sourceSign,
+        0'u64,
+        0'u64,
+        0'u64,
+      )
+
+    let
+      highestBit =
+        if sourceFractionHigh != 0'u64:
+          64 +
+            float256NativeSourceHighestBit64(
+              sourceFractionHigh
+            )
+        else:
+          float256NativeSourceHighestBit64(
+            sourceFractionLow
+          )
+
+      targetExponent =
+        uint64(
+          highestBit +
+          245649
+        )
+
+      packed =
+        float128FractionToFloat256Words(
+          sourceFractionHigh,
+          sourceFractionLow,
+          Float256FractionBits -
+            highestBit,
+          highestBit,
+        )
+
+    return fromBits(
+      sourceSign or
+        (
+          targetExponent shl 44
+        ) or
+        packed[3],
+      packed[2],
+      packed[1],
+      packed[0],
+    )
+
+  let
+    targetExponent =
+      if sourceExponent == 0x7FFF'u64:
+        0x0007_FFFF'u64
+      else:
+        sourceExponent +
+          245760'u64
+
+    packed =
+      float128FractionToFloat256Words(
+        sourceFractionHigh,
+        sourceFractionLow,
+        124,
+      )
+
+  fromBits(
+    sourceSign or
+      (
+        targetExponent shl 44
+      ) or
+      packed[3],
+    packed[2],
+    packed[1],
+    packed[0],
+  )
+
+func float256ShiftRightToUInt128Pair(
+    limbs: Float256NativeConversionLimbs,
+    shift: int,
+): Float256Float128Pair {.inline.} =
+  for destinationBit in 0 ..< 128:
+    let sourceBit =
+      destinationBit +
+      shift
+
+    if not float256NativeBit(
+        limbs,
+        sourceBit,
+    ):
+      continue
+
+    if destinationBit < 64:
+      result.low =
+        result.low or
+        (
+          1'u64 shl
+          destinationBit
+        )
+    else:
+      result.high =
+        result.high or
+        (
+          1'u64 shl
+          (
+            destinationBit -
+            64
+          )
+        )
+
+func float256IncrementUInt128Pair(
+    value: var Float256Float128Pair,
+) {.inline.} =
+  if value.low == high(uint64):
+    value.low = 0'u64
+    value.high =
+      value.high +
+      1'u64
+  else:
+    value.low =
+      value.low +
+      1'u64
+
+func float256RoundShiftToUInt128Pair(
+    limbs: Float256NativeConversionLimbs,
+    shift: int,
+): Float256Float128Pair {.inline.} =
+  result =
+    float256ShiftRightToUInt128Pair(
+      limbs,
+      shift,
+    )
+
+  if shift <= 0 or
+      shift > 256:
+    return
+
+  let
+    guard =
+      float256NativeBit(
+        limbs,
+        shift - 1,
+      )
+
+    sticky =
+      float256NativeAnyBitsBelow(
+        limbs,
+        shift - 1,
+      )
+
+  if guard and
+      (
+        sticky or
+        (
+          result.low and
+          1'u64
+        ) != 0'u64
+      ):
+    float256IncrementUInt128Pair(
+      result
+    )
+
+func float256PackFloat128Result(
+    negative: bool,
+    exponentField: uint64,
+    significand: Float256Float128Pair,
+): binary128.Float128 {.inline.} =
+  var highWord =
+    (
+      exponentField shl 48
+    ) or
+    (
+      significand.high and
+      0x0000_FFFF_FFFF_FFFF'u64
+    )
+
+  if negative:
+    highWord =
+      highWord or
+      0x8000_0000_0000_0000'u64
+
+  binary128.fromBits(
+    highWord,
+    significand.low,
+  )
+
+func toFloat128*(
+    value: Float256,
+): binary128.Float128 =
+  ## Converts binary256 to binary128 using roundTiesToEven.
+  ##
+  ## Signed zero and infinity are preserved. NaN sign and the most
+  ## significant 112 payload bits are retained.
+
+  let
+    source =
+      toBits(value)
+
+    sourceNegative =
+      (
+        source.word3 and
+        0x8000_0000_0000_0000'u64
+      ) != 0'u64
+
+    sourceExponent =
+      int(
+        (
+          source.word3 shr 44
+        ) and
+        0x0007_FFFF'u64
+      )
+
+    sourceFraction:
+      Float256NativeConversionLimbs =
+        [
+          source.word0,
+          source.word1,
+          source.word2,
+          source.word3 and
+            0x0000_0FFF_FFFF_FFFF'u64,
+        ]
+
+    sourceFractionIsZero =
+      sourceFraction[0] == 0'u64 and
+      sourceFraction[1] == 0'u64 and
+      sourceFraction[2] == 0'u64 and
+      sourceFraction[3] == 0'u64
+
+  if sourceExponent == 0x0007_FFFF:
+    if sourceFractionIsZero:
+      return
+        float256PackFloat128Result(
+          sourceNegative,
+          0x7FFF'u64,
+          (
+            high: 0'u64,
+            low: 0'u64,
+          ),
+        )
+
+    var payload =
+      float256ShiftRightToUInt128Pair(
+        sourceFraction,
+        124,
+      )
+
+    if payload.high == 0'u64 and
+        payload.low == 0'u64:
+      payload.low = 1'u64
+
+    return
+      float256PackFloat128Result(
+        sourceNegative,
+        0x7FFF'u64,
+        payload,
+      )
+
+  if sourceExponent == 0 and
+      sourceFractionIsZero:
+    return
+      float256PackFloat128Result(
+        sourceNegative,
+        0'u64,
+        (
+          high: 0'u64,
+          low: 0'u64,
+        ),
+      )
+
+  var
+    significand =
+      sourceFraction
+
+    highestBit: int
+    binaryExponent: int
+
+  if sourceExponent == 0:
+    highestBit =
+      float256NativeHighestBit(
+        significand
+      )
+
+    binaryExponent =
+      1 -
+      Float256ExponentBias -
+      Float256FractionBits
+
+  else:
+    significand[3] =
+      significand[3] or
+      (
+        1'u64 shl 44
+      )
+
+    highestBit =
+      Float256FractionBits
+
+    binaryExponent =
+      sourceExponent -
+      Float256ExponentBias -
+      Float256FractionBits
+
+  let resultExponent =
+    highestBit +
+    binaryExponent
+
+  if resultExponent > 16383:
+    return
+      float256PackFloat128Result(
+        sourceNegative,
+        0x7FFF'u64,
+        (
+          high: 0'u64,
+          low: 0'u64,
+        ),
+      )
+
+  if resultExponent >= -16382:
+    let shift =
+      highestBit -
+      binary128.Float128FractionBits
+
+    var
+      roundedSignificand =
+        float256RoundShiftToUInt128Pair(
+          significand,
+          shift,
+        )
+
+      targetExponent =
+        resultExponent
+
+    if roundedSignificand.high >=
+        0x0002_0000_0000_0000'u64:
+      roundedSignificand =
+        (
+          high:
+            roundedSignificand.high shr 1,
+          low:
+            (
+              roundedSignificand.low shr 1
+            ) or
+            (
+              roundedSignificand.high shl 63
+            ),
+        )
+
+      inc targetExponent
+
+      if targetExponent > 16383:
+        return
+          float256PackFloat128Result(
+            sourceNegative,
+            0x7FFF'u64,
+            (
+              high: 0'u64,
+              low: 0'u64,
+            ),
+          )
+
+    return
+      float256PackFloat128Result(
+        sourceNegative,
+        uint64(
+          targetExponent +
+          binary128.Float128ExponentBias
+        ),
+        roundedSignificand,
+      )
+
+  let
+    targetQuantumExponent =
+      -16494
+
+    shift =
+      targetQuantumExponent -
+      binaryExponent
+
+    roundedFraction =
+      float256RoundShiftToUInt128Pair(
+        significand,
+        shift,
+      )
+
+  if roundedFraction.high == 0'u64 and
+      roundedFraction.low == 0'u64:
+    return
+      float256PackFloat128Result(
+        sourceNegative,
+        0'u64,
+        roundedFraction,
+      )
+
+  if roundedFraction.high >=
+      0x0001_0000_0000_0000'u64:
+    return
+      float256PackFloat128Result(
+        sourceNegative,
+        1'u64,
+        (
+          high: 0'u64,
+          low: 0'u64,
+        ),
+      )
+
+  float256PackFloat128Result(
+    sourceNegative,
+    0'u64,
+    roundedFraction,
+  )
 
 # ----------------------------------------------------------------------
 # Project-local binary256-style addition and subtraction
