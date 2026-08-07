@@ -8,10 +8,12 @@
 ## - sign manipulation
 ## - total ordering and adjacent-value operations
 ##
-## Native float32 / float64 and Float128 conversion is available.
-## Integer conversion, parsing and formatting remain deferred.
+## Native float32 / float64, Float128 and fixed-width integer conversion is available.
+## Parsing and formatting remain deferred.
 
 import atcoder/extra/numeric/float128 as binary128
+import atcoder/extra/numeric/int128
+import atcoder/extra/numeric/int256
 import atcoder/extra/numeric/internal/limbs
 import atcoder/extra/numeric/internal/wide_mul
 import atcoder/extra/numeric/internal/wide_div
@@ -576,6 +578,623 @@ func infinityFloat256*(
   else:
     positiveInfinityFloat256
 
+
+
+# ----------------------------------------------------------------------
+# Fixed-width integer conversion
+# ----------------------------------------------------------------------
+
+type
+  Float256IntegerLimbs =
+    array[4, uint64]
+
+func float256IntegerLimbs(
+    value: UInt128,
+): Float256IntegerLimbs {.inline.} =
+  [
+    low64(value),
+    high64(value),
+    0'u64,
+    0'u64,
+  ]
+
+func float256IntegerLimbs(
+    value: UInt256,
+): Float256IntegerLimbs {.inline.} =
+  [
+    word64(value, 0),
+    word64(value, 1),
+    word64(value, 2),
+    word64(value, 3),
+  ]
+
+func float256IntegerBit(
+    limbs: Float256IntegerLimbs,
+    index: int,
+): bool {.inline.} =
+  if index < 0 or
+      index >= 256:
+    return false
+
+  (
+    (
+      limbs[index shr 6] shr
+      (index and 63)
+    ) and
+    1'u64
+  ) != 0'u64
+
+func float256IntegerBitLength(
+    limbs: Float256IntegerLimbs,
+): int {.inline.} =
+  for index in countdown(255, 0):
+    if float256IntegerBit(
+        limbs,
+        index,
+    ):
+      return index + 1
+
+  0
+
+func float256IntegerAnyBitsBelow(
+    limbs: Float256IntegerLimbs,
+    highExclusive: int,
+): bool {.inline.} =
+  if highExclusive <= 0:
+    return false
+
+  for index in 0 ..<
+      min(
+        highExclusive,
+        256,
+      ):
+    if float256IntegerBit(
+        limbs,
+        index,
+    ):
+      return true
+
+  false
+
+func float256IntegerSetBit(
+    limbs: var Float256IntegerLimbs,
+    index: int,
+) {.inline.} =
+  doAssert index >= 0
+  doAssert index < 256
+
+  limbs[index shr 6] =
+    limbs[index shr 6] or
+    (
+      1'u64 shl
+      (index and 63)
+    )
+
+func float256IntegerIncrement(
+    limbs: var Float256IntegerLimbs,
+) {.inline.} =
+  for index in 0 .. 3:
+    limbs[index] =
+      limbs[index] +
+      1'u64
+
+    if limbs[index] != 0'u64:
+      return
+
+func toFloat256FromIntegerLimbs(
+    limbs: Float256IntegerLimbs,
+    negative: bool,
+): Float256 =
+  let bitLength =
+    float256IntegerBitLength(
+      limbs
+    )
+
+  if bitLength == 0:
+    return positiveZeroFloat256
+
+  var
+    exponent =
+      bitLength - 1
+
+    significand:
+      Float256IntegerLimbs
+
+  if bitLength <=
+      Float256PrecisionBits:
+    let leftShift =
+      Float256PrecisionBits -
+      bitLength
+
+    for sourceBit in 0 ..<
+        bitLength:
+      if float256IntegerBit(
+          limbs,
+          sourceBit,
+      ):
+        float256IntegerSetBit(
+          significand,
+          sourceBit +
+            leftShift,
+        )
+
+  else:
+    let rightShift =
+      bitLength -
+      Float256PrecisionBits
+
+    for destinationBit in 0 ..<
+        Float256PrecisionBits:
+      if float256IntegerBit(
+          limbs,
+          destinationBit +
+            rightShift,
+      ):
+        float256IntegerSetBit(
+          significand,
+          destinationBit,
+        )
+
+    let
+      guardBit =
+        float256IntegerBit(
+          limbs,
+          rightShift - 1,
+        )
+
+      stickyBit =
+        float256IntegerAnyBitsBelow(
+          limbs,
+          rightShift - 1,
+        )
+
+      retainedLeastBitIsOdd =
+        (
+          significand[0] and
+          1'u64
+        ) != 0'u64
+
+    if guardBit and
+        (
+          stickyBit or
+          retainedLeastBitIsOdd
+        ):
+      float256IntegerIncrement(
+        significand
+      )
+
+      if (
+        significand[3] and
+        (
+          1'u64 shl 45
+        )
+      ) != 0'u64:
+        significand = [
+          0'u64,
+          0'u64,
+          0'u64,
+          1'u64 shl 44,
+        ]
+
+        inc exponent
+
+  var word3 =
+    (
+      uint64(
+        exponent +
+        Float256ExponentBias
+      ) shl 44
+    ) or
+    (
+      significand[3] and
+      0x0000_0FFF_FFFF_FFFF'u64
+    )
+
+  if negative:
+    word3 =
+      word3 or
+      0x8000_0000_0000_0000'u64
+
+  fromBits(
+    word3,
+    significand[2],
+    significand[1],
+    significand[0],
+  )
+
+func toFloat256*(
+    value: UInt128,
+): Float256 =
+  ## Converts UInt128 exactly to binary256.
+
+  toFloat256FromIntegerLimbs(
+    float256IntegerLimbs(value),
+    false,
+  )
+
+func toFloat256*(
+    value: Int128,
+): Float256 =
+  ## Converts Int128 exactly to binary256.
+
+  let
+    bits =
+      toUInt128(value)
+
+    negative =
+      (
+        high64(bits) and
+        0x8000_0000_0000_0000'u64
+      ) != 0'u64
+
+    magnitude =
+      if negative:
+        toUInt128(0'u64) -
+          bits
+      else:
+        bits
+
+  toFloat256FromIntegerLimbs(
+    float256IntegerLimbs(
+      magnitude
+    ),
+    negative,
+  )
+
+func toFloat256*(
+    value: UInt256,
+): Float256 =
+  ## Converts UInt256 using IEEE 754 roundTiesToEven.
+
+  toFloat256FromIntegerLimbs(
+    float256IntegerLimbs(value),
+    false,
+  )
+
+func toFloat256*(
+    value: Int256,
+): Float256 =
+  ## Converts Int256 using its two's-complement magnitude and
+  ## IEEE 754 roundTiesToEven when required.
+
+  let
+    bits =
+      asUInt256(value)
+
+    negative =
+      (
+        word64(bits, 3) and
+        0x8000_0000_0000_0000'u64
+      ) != 0'u64
+
+    magnitude =
+      if negative:
+        toUInt256(0'u64) -
+          bits
+      else:
+        bits
+
+  toFloat256FromIntegerLimbs(
+    float256IntegerLimbs(
+      magnitude
+    ),
+    negative,
+  )
+
+proc float256IntegerMagnitude128(
+    value: Float256;
+    destination: var UInt128;
+    negative: var bool;
+    unbiasedExponent: var int;
+    sourceFractionNonzero: var bool;
+): bool =
+  destination =
+    toUInt128(0'u64)
+
+  let
+    raw =
+      toBits(value)
+
+    exponentField =
+      int(
+        (
+          raw.word3 shr 44
+        ) and
+        0x0007_FFFF'u64
+      )
+
+    fractionHigh =
+      raw.word3 and
+      0x0000_0FFF_FFFF_FFFF'u64
+
+  negative =
+    (
+      raw.word3 and
+      0x8000_0000_0000_0000'u64
+    ) != 0'u64
+
+  sourceFractionNonzero =
+    fractionHigh != 0'u64 or
+    raw.word2 != 0'u64 or
+    raw.word1 != 0'u64 or
+    raw.word0 != 0'u64
+
+  unbiasedExponent =
+    -Float256ExponentBias
+
+  if exponentField ==
+      0x0007_FFFF:
+    return false
+
+  if exponentField == 0:
+    return true
+
+  unbiasedExponent =
+    exponentField -
+    Float256ExponentBias
+
+  if unbiasedExponent < 0:
+    return true
+
+  if unbiasedExponent > 127:
+    return false
+
+  let
+    significand =
+      fromUInt64Words(
+        fractionHigh or
+          (
+            1'u64 shl 44
+          ),
+        raw.word2,
+        raw.word1,
+        raw.word0,
+      )
+
+    shifted =
+      significand shr
+      (
+        Float256FractionBits -
+        unbiasedExponent
+      )
+
+  destination =
+    low128(shifted)
+
+  true
+
+proc float256IntegerMagnitude256(
+    value: Float256;
+    destination: var UInt256;
+    negative: var bool;
+    unbiasedExponent: var int;
+    sourceFractionNonzero: var bool;
+): bool =
+  destination =
+    toUInt256(0'u64)
+
+  let
+    raw =
+      toBits(value)
+
+    exponentField =
+      int(
+        (
+          raw.word3 shr 44
+        ) and
+        0x0007_FFFF'u64
+      )
+
+    fractionHigh =
+      raw.word3 and
+      0x0000_0FFF_FFFF_FFFF'u64
+
+  negative =
+    (
+      raw.word3 and
+      0x8000_0000_0000_0000'u64
+    ) != 0'u64
+
+  sourceFractionNonzero =
+    fractionHigh != 0'u64 or
+    raw.word2 != 0'u64 or
+    raw.word1 != 0'u64 or
+    raw.word0 != 0'u64
+
+  unbiasedExponent =
+    -Float256ExponentBias
+
+  if exponentField ==
+      0x0007_FFFF:
+    return false
+
+  if exponentField == 0:
+    return true
+
+  unbiasedExponent =
+    exponentField -
+    Float256ExponentBias
+
+  if unbiasedExponent < 0:
+    return true
+
+  if unbiasedExponent > 255:
+    return false
+
+  let significand =
+    fromUInt64Words(
+      fractionHigh or
+        (
+          1'u64 shl 44
+        ),
+      raw.word2,
+      raw.word1,
+      raw.word0,
+    )
+
+  if unbiasedExponent >=
+      Float256FractionBits:
+    destination =
+      significand shl
+      (
+        unbiasedExponent -
+        Float256FractionBits
+      )
+  else:
+    destination =
+      significand shr
+      (
+        Float256FractionBits -
+        unbiasedExponent
+      )
+
+  true
+
+proc tryToUInt128*(
+    value: Float256;
+    destination: var UInt128;
+): bool =
+  destination =
+    toUInt128(0'u64)
+
+  var
+    magnitude: UInt128
+    negative: bool
+    unbiasedExponent: int
+    sourceFractionNonzero: bool
+
+  if not float256IntegerMagnitude128(
+      value,
+      magnitude,
+      negative,
+      unbiasedExponent,
+      sourceFractionNonzero,
+  ):
+    return false
+
+  if negative and
+      unbiasedExponent >= 0:
+    return false
+
+  destination =
+    magnitude
+
+  true
+
+proc tryToInt128*(
+    value: Float256;
+    destination: var Int128;
+): bool =
+  destination =
+    toInt128(0'i64)
+
+  var
+    magnitude: UInt128
+    negative: bool
+    unbiasedExponent: int
+    sourceFractionNonzero: bool
+
+  if not float256IntegerMagnitude128(
+      value,
+      magnitude,
+      negative,
+      unbiasedExponent,
+      sourceFractionNonzero,
+  ):
+    return false
+
+  if unbiasedExponent == 127:
+    if not negative or
+        high64(magnitude) !=
+          0x8000_0000_0000_0000'u64 or
+        low64(magnitude) != 0'u64:
+      return false
+
+  if negative:
+    destination =
+      toInt128(
+        toUInt128(0'u64) -
+        magnitude
+      )
+  else:
+    destination =
+      toInt128(magnitude)
+
+  true
+
+proc tryToUInt256*(
+    value: Float256;
+    destination: var UInt256;
+): bool =
+  destination =
+    toUInt256(0'u64)
+
+  var
+    magnitude: UInt256
+    negative: bool
+    unbiasedExponent: int
+    sourceFractionNonzero: bool
+
+  if not float256IntegerMagnitude256(
+      value,
+      magnitude,
+      negative,
+      unbiasedExponent,
+      sourceFractionNonzero,
+  ):
+    return false
+
+  if negative and
+      unbiasedExponent >= 0:
+    return false
+
+  destination =
+    magnitude
+
+  true
+
+proc tryToInt256*(
+    value: Float256;
+    destination: var Int256;
+): bool =
+  destination =
+    toInt256(0'i64)
+
+  var
+    magnitude: UInt256
+    negative: bool
+    unbiasedExponent: int
+    sourceFractionNonzero: bool
+
+  if not float256IntegerMagnitude256(
+      value,
+      magnitude,
+      negative,
+      unbiasedExponent,
+      sourceFractionNonzero,
+  ):
+    return false
+
+  if unbiasedExponent == 255:
+    if not negative or
+        word64(magnitude, 3) !=
+          0x8000_0000_0000_0000'u64 or
+        word64(magnitude, 2) != 0'u64 or
+        word64(magnitude, 1) != 0'u64 or
+        word64(magnitude, 0) != 0'u64:
+      return false
+
+  if negative:
+    destination =
+      asInt256(
+        toUInt256(0'u64) -
+        magnitude
+      )
+  else:
+    destination =
+      asInt256(magnitude)
+
+  true
 
 # ----------------------------------------------------------------------
 # Exact native binary32 / binary64 conversion
