@@ -9,7 +9,7 @@
 ## - total ordering and adjacent-value operations
 ##
 ## Native float32 / float64, Float128 and fixed-width integer conversion is available.
-## Parsing and formatting remain deferred.
+## Parsing is available. Formatting remains deferred.
 
 import atcoder/extra/numeric/float128 as binary128
 import atcoder/extra/numeric/int128
@@ -3203,3 +3203,919 @@ func `/`*(
     lhs,
     rhs,
   )
+# ----------------------------------------------------------------------
+# Exact raw hexadecimal and correctly rounded decimal parsing
+# ----------------------------------------------------------------------
+
+const
+  float256DecimalMaximumInputBytes =
+    10_000
+
+  float256DecimalMaximumExponentDigits =
+    9
+
+  float256DecimalMaximumAbsoluteExponent =
+    100_000
+
+  float256DecimalPowerOfFiveChunkExponent =
+    13
+
+  float256DecimalPowerOfFiveChunk =
+    1_220_703_125'u32
+
+type
+  Float256DecimalBigUInt =
+    object
+      limbs: seq[uint32]
+
+func float256HexNibble(
+    value: char,
+): int {.inline.} =
+  case value
+  of '0'..'9':
+    ord(value) - ord('0')
+  of 'A'..'F':
+    ord(value) - ord('A') + 10
+  of 'a'..'f':
+    ord(value) - ord('a') + 10
+  else:
+    -1
+
+proc tryParseHexFloat256*(
+    text: string;
+    destination: var Float256;
+): bool =
+  ## Parses a 0x-prefixed exact 256-bit raw encoding.
+
+  destination =
+    positiveZeroFloat256
+
+  if text.len != 66:
+    return false
+
+  if text[0] != '0' or
+      (
+        text[1] != 'x' and
+        text[1] != 'X'
+      ):
+    return false
+
+  var words:
+    array[4, uint64]
+
+  for wordIndex in 0 ..< 4:
+    for digitIndex in 0 ..< 16:
+      let nibble =
+        float256HexNibble(
+          text[
+            2 +
+            wordIndex * 16 +
+            digitIndex
+          ]
+        )
+
+      if nibble < 0:
+        return false
+
+      words[wordIndex] =
+        (
+          words[wordIndex] shl 4
+        ) or
+        uint64(nibble)
+
+  destination =
+    fromBits(
+      words[0],
+      words[1],
+      words[2],
+      words[3],
+    )
+
+  true
+
+func float256DecimalIsZero(
+    value: Float256DecimalBigUInt,
+): bool {.inline.} =
+  value.limbs.len == 0
+
+proc float256DecimalNormalize(
+    value: var Float256DecimalBigUInt,
+) =
+  while value.limbs.len > 0 and
+      value.limbs[^1] == 0'u32:
+    value.limbs.setLen(
+      value.limbs.len - 1
+    )
+
+proc float256DecimalAddSmall(
+    value: var Float256DecimalBigUInt;
+    addend: uint32;
+) =
+  if addend == 0'u32:
+    return
+
+  if value.limbs.len == 0:
+    value.limbs =
+      @[addend]
+
+    return
+
+  var
+    index = 0
+    carry =
+      uint64(addend)
+
+  while carry != 0'u64:
+    if index == value.limbs.len:
+      value.limbs.add(
+        0'u32
+      )
+
+    let total =
+      uint64(
+        value.limbs[index]
+      ) +
+      carry
+
+    value.limbs[index] =
+      uint32(
+        total and
+        0xFFFF_FFFF'u64
+      )
+
+    carry =
+      total shr 32
+
+    inc index
+
+proc float256DecimalMultiplySmall(
+    value: var Float256DecimalBigUInt;
+    factor: uint32;
+) =
+  if value.float256DecimalIsZero or
+      factor == 1'u32:
+    return
+
+  if factor == 0'u32:
+    value.limbs.setLen(0)
+    return
+
+  var carry =
+    0'u64
+
+  for index in 0 ..<
+      value.limbs.len:
+    let product =
+      uint64(
+        value.limbs[index]
+      ) *
+      uint64(factor) +
+      carry
+
+    value.limbs[index] =
+      uint32(
+        product and
+        0xFFFF_FFFF'u64
+      )
+
+    carry =
+      product shr 32
+
+  if carry != 0'u64:
+    value.limbs.add(
+      uint32(carry)
+    )
+
+proc float256DecimalMultiplyPowerOfFive(
+    value: var Float256DecimalBigUInt;
+    exponent: int;
+) =
+  doAssert exponent >= 0
+
+  var remaining =
+    exponent
+
+  while remaining >=
+      float256DecimalPowerOfFiveChunkExponent:
+    value.float256DecimalMultiplySmall(
+      float256DecimalPowerOfFiveChunk
+    )
+
+    remaining -=
+      float256DecimalPowerOfFiveChunkExponent
+
+  for _ in 0 ..<
+      remaining:
+    value.float256DecimalMultiplySmall(
+      5'u32
+    )
+
+func float256DecimalPowerOfFive(
+    exponent: int,
+): Float256DecimalBigUInt =
+  doAssert exponent >= 0
+
+  result.limbs =
+    @[1'u32]
+
+  result.float256DecimalMultiplyPowerOfFive(
+    exponent
+  )
+
+func float256DecimalFromDigits(
+    digits: string;
+    first,
+    pastLast: int;
+): Float256DecimalBigUInt =
+  for index in first ..<
+      pastLast:
+    result.float256DecimalMultiplySmall(
+      10'u32
+    )
+
+    result.float256DecimalAddSmall(
+      uint32(
+        ord(digits[index]) -
+        ord('0')
+      )
+    )
+
+  result.float256DecimalNormalize()
+
+func float256DecimalCompare(
+    lhs,
+    rhs: Float256DecimalBigUInt,
+): int =
+  if lhs.limbs.len !=
+      rhs.limbs.len:
+    if lhs.limbs.len <
+        rhs.limbs.len:
+      return -1
+
+    return 1
+
+  if lhs.limbs.len == 0:
+    return 0
+
+  for index in countdown(
+      lhs.limbs.len - 1,
+      0,
+  ):
+    if lhs.limbs[index] <
+        rhs.limbs[index]:
+      return -1
+
+    if lhs.limbs[index] >
+        rhs.limbs[index]:
+      return 1
+
+  0
+
+func float256DecimalLimbBitLength(
+    value: uint32,
+): int =
+  var remaining =
+    value
+
+  while remaining != 0'u32:
+    inc result
+    remaining =
+      remaining shr 1
+
+func float256DecimalBitLength(
+    value: Float256DecimalBigUInt,
+): int =
+  if value.float256DecimalIsZero:
+    return 0
+
+  (
+    value.limbs.len - 1
+  ) * 32 +
+  float256DecimalLimbBitLength(
+    value.limbs[^1]
+  )
+
+func float256DecimalShiftLeft(
+    value: Float256DecimalBigUInt;
+    distance: int;
+): Float256DecimalBigUInt =
+  doAssert distance >= 0
+
+  if value.float256DecimalIsZero:
+    return
+
+  if distance == 0:
+    return value
+
+  let
+    limbShift =
+      distance div 32
+
+    bitShift =
+      distance mod 32
+
+  result.limbs =
+    newSeq[uint32](
+      value.limbs.len +
+      limbShift +
+      1
+    )
+
+  var carry =
+    0'u64
+
+  for index in 0 ..<
+      value.limbs.len:
+    let combined =
+      (
+        uint64(
+          value.limbs[index]
+        ) shl bitShift
+      ) or
+      carry
+
+    result.limbs[
+      index + limbShift
+    ] =
+      uint32(
+        combined and
+        0xFFFF_FFFF'u64
+      )
+
+    carry =
+      combined shr 32
+
+  if carry != 0'u64:
+    result.limbs[
+      value.limbs.len +
+      limbShift
+    ] =
+      uint32(carry)
+
+  result.float256DecimalNormalize()
+
+proc float256DecimalShiftLeftOne(
+    value: var Float256DecimalBigUInt,
+) =
+  if value.float256DecimalIsZero:
+    return
+
+  var carry =
+    0'u64
+
+  for index in 0 ..<
+      value.limbs.len:
+    let combined =
+      (
+        uint64(
+          value.limbs[index]
+        ) shl 1
+      ) or
+      carry
+
+    value.limbs[index] =
+      uint32(
+        combined and
+        0xFFFF_FFFF'u64
+      )
+
+    carry =
+      combined shr 32
+
+  if carry != 0'u64:
+    value.limbs.add(
+      uint32(carry)
+    )
+
+proc float256DecimalSubtractAssign(
+    value: var Float256DecimalBigUInt;
+    subtrahend: Float256DecimalBigUInt;
+) =
+  doAssert float256DecimalCompare(
+    value,
+    subtrahend,
+  ) >= 0
+
+  var borrow =
+    0'u64
+
+  for index in 0 ..<
+      value.limbs.len:
+    let
+      lhs =
+        uint64(
+          value.limbs[index]
+        )
+
+      rhs =
+        (
+          if index <
+              subtrahend.limbs.len:
+            uint64(
+              subtrahend.limbs[index]
+            )
+          else:
+            0'u64
+        ) +
+        borrow
+
+    if lhs >= rhs:
+      value.limbs[index] =
+        uint32(
+          lhs - rhs
+        )
+
+      borrow =
+        0'u64
+    else:
+      value.limbs[index] =
+        uint32(
+          (
+            1'u64 shl 32
+          ) +
+          lhs -
+          rhs
+        )
+
+      borrow =
+        1'u64
+
+  doAssert borrow == 0'u64
+
+  value.float256DecimalNormalize()
+
+proc float256DecimalSetExtendedBit(
+    value: var UInt512Limbs;
+    position: int;
+) =
+  doAssert position >= 0
+  doAssert position < 512
+
+  value[position shr 6] =
+    value[position shr 6] or
+    (
+      1'u64 shl
+      (
+        position and 63
+      )
+    )
+
+func float256DecimalNormalizedRatio(
+    numerator,
+    denominator: Float256DecimalBigUInt,
+): tuple[
+    exponent: int,
+    extended: UInt512Limbs,
+    remainderNonzero: bool,
+] =
+  doAssert not numerator.float256DecimalIsZero
+  doAssert not denominator.float256DecimalIsZero
+
+  var exponent =
+    numerator.float256DecimalBitLength -
+    denominator.float256DecimalBitLength
+
+  if exponent >= 0:
+    let scaledDenominator =
+      denominator.float256DecimalShiftLeft(
+        exponent
+      )
+
+    if float256DecimalCompare(
+        numerator,
+        scaledDenominator,
+    ) < 0:
+      dec exponent
+  else:
+    let scaledNumerator =
+      numerator.float256DecimalShiftLeft(
+        -exponent
+      )
+
+    if float256DecimalCompare(
+        scaledNumerator,
+        denominator,
+    ) < 0:
+      dec exponent
+
+  var
+    normalizedDenominator:
+      Float256DecimalBigUInt
+
+    remainder:
+      Float256DecimalBigUInt
+
+  if exponent >= 0:
+    normalizedDenominator =
+      denominator.float256DecimalShiftLeft(
+        exponent
+      )
+
+    remainder =
+      numerator
+
+    remainder.float256DecimalSubtractAssign(
+      normalizedDenominator
+    )
+  else:
+    remainder =
+      numerator.float256DecimalShiftLeft(
+        -exponent
+      )
+
+    normalizedDenominator =
+      denominator
+
+    remainder.float256DecimalSubtractAssign(
+      normalizedDenominator
+    )
+
+  result.exponent =
+    exponent
+
+  result.extended.float256DecimalSetExtendedBit(
+    239
+  )
+
+  for position in countdown(
+      238,
+      1,
+  ):
+    remainder.float256DecimalShiftLeftOne()
+
+    if float256DecimalCompare(
+        remainder,
+        normalizedDenominator,
+    ) >= 0:
+      remainder.float256DecimalSubtractAssign(
+        normalizedDenominator
+      )
+
+      result.extended.float256DecimalSetExtendedBit(
+        position
+      )
+
+  remainder.float256DecimalShiftLeftOne()
+
+  if float256DecimalCompare(
+      remainder,
+      normalizedDenominator,
+  ) >= 0:
+    remainder.float256DecimalSubtractAssign(
+      normalizedDenominator
+    )
+
+    result.extended.float256DecimalSetExtendedBit(
+      0
+    )
+
+  result.remainderNonzero =
+    not remainder.float256DecimalIsZero
+
+  if result.remainderNonzero:
+    result.extended.float256DecimalSetExtendedBit(
+      0
+    )
+
+func float256DecimalAsciiLower(
+    value: char,
+): char {.inline.} =
+  if value >= 'A' and
+      value <= 'Z':
+    char(
+      ord(value) +
+      ord('a') -
+      ord('A')
+    )
+  else:
+    value
+
+func float256DecimalEqualsIgnoreCase(
+    text: string;
+    first: int;
+    expected: string;
+): bool =
+  if text.len - first !=
+      expected.len:
+    return false
+
+  for index in 0 ..<
+      expected.len:
+    if float256DecimalAsciiLower(
+        text[first + index]
+    ) != expected[index]:
+      return false
+
+  true
+
+proc tryParseFloat256*(
+    text: string;
+    destination: var Float256;
+): bool =
+  ## Parses an ASCII decimal binary256 value using roundTiesToEven.
+  ##
+  ## Accepted finite forms are digits, digits., digits.fraction,
+  ## .fraction, and an optional e/E exponent. Optional leading signs
+  ## and the case-insensitive specials inf, infinity, and nan are
+  ## accepted. Whitespace and digit separators are rejected.
+
+  destination =
+    positiveZeroFloat256
+
+  if text.len == 0 or
+      text.len >
+        float256DecimalMaximumInputBytes:
+    return false
+
+  var
+    index = 0
+    negative = false
+
+  if text[index] == '+' or
+      text[index] == '-':
+    negative =
+      text[index] == '-'
+
+    inc index
+
+    if index == text.len:
+      return false
+
+  let signBits =
+    if negative:
+      float256SignMask
+    else:
+      0'u64
+
+  if float256DecimalEqualsIgnoreCase(
+      text,
+      index,
+      "inf",
+  ) or
+      float256DecimalEqualsIgnoreCase(
+        text,
+        index,
+        "infinity",
+      ):
+    destination =
+      fromBits(
+        signBits or
+          float256ExponentMask,
+        0'u64,
+        0'u64,
+        0'u64,
+      )
+
+    return true
+
+  if float256DecimalEqualsIgnoreCase(
+      text,
+      index,
+      "nan",
+  ):
+    destination =
+      fromBits(
+        signBits or
+          float256ExponentMask or
+          float256QuietNaNMask,
+        0'u64,
+        0'u64,
+        0'u64,
+      )
+
+    return true
+
+  var
+    digits =
+      newStringOfCap(
+        text.len
+      )
+
+    fractionalDigitCount =
+      0
+
+    sawDigit =
+      false
+
+    sawPoint =
+      false
+
+  while index < text.len and
+      text[index] != 'e' and
+      text[index] != 'E':
+    let character =
+      text[index]
+
+    if character >= '0' and
+        character <= '9':
+      sawDigit =
+        true
+
+      digits.add(
+        character
+      )
+
+      if sawPoint:
+        inc fractionalDigitCount
+    elif character == '.' and
+        not sawPoint:
+      sawPoint =
+        true
+    else:
+      return false
+
+    inc index
+
+  if not sawDigit:
+    return false
+
+  var explicitExponent =
+    0
+
+  if index < text.len:
+    inc index
+
+    if index == text.len:
+      return false
+
+    var exponentNegative =
+      false
+
+    if text[index] == '+' or
+        text[index] == '-':
+      exponentNegative =
+        text[index] == '-'
+
+      inc index
+
+      if index == text.len:
+        return false
+
+    var exponentDigitCount =
+      0
+
+    while index < text.len:
+      let character =
+        text[index]
+
+      if character < '0' or
+          character > '9':
+        return false
+
+      inc exponentDigitCount
+
+      if exponentDigitCount >
+          float256DecimalMaximumExponentDigits:
+        return false
+
+      explicitExponent =
+        explicitExponent * 10 +
+        ord(character) -
+        ord('0')
+
+      if explicitExponent >
+          float256DecimalMaximumAbsoluteExponent:
+        return false
+
+      inc index
+
+    if exponentDigitCount == 0:
+      return false
+
+    if exponentNegative:
+      explicitExponent =
+        -explicitExponent
+
+  var firstNonzero =
+    -1
+
+  for digitIndex in 0 ..<
+      digits.len:
+    if digits[digitIndex] != '0':
+      firstNonzero =
+        digitIndex
+
+      break
+
+  if firstNonzero < 0:
+    destination =
+      fromBits(
+        signBits,
+        0'u64,
+        0'u64,
+        0'u64,
+      )
+
+    return true
+
+  var
+    trailingZeroCount =
+      0
+
+    trailingIndex =
+      digits.len - 1
+
+  while trailingIndex >=
+      firstNonzero and
+      digits[trailingIndex] == '0':
+    inc trailingZeroCount
+    dec trailingIndex
+
+  let
+    significantPastLast =
+      digits.len -
+      trailingZeroCount
+
+    significantDigitCount =
+      significantPastLast -
+      firstNonzero
+
+    decimalExponent =
+      explicitExponent -
+      fractionalDigitCount +
+      trailingZeroCount
+
+    decimalOrder =
+      significantDigitCount -
+      1 +
+      decimalExponent
+
+  if decimalOrder > 78913:
+    destination =
+      fromBits(
+        signBits or
+          float256ExponentMask,
+        0'u64,
+        0'u64,
+        0'u64,
+      )
+
+    return true
+
+  if decimalOrder < -78984:
+    destination =
+      fromBits(
+        signBits,
+        0'u64,
+        0'u64,
+        0'u64,
+      )
+
+    return true
+
+  var
+    numerator =
+      float256DecimalFromDigits(
+        digits,
+        firstNonzero,
+        significantPastLast,
+      )
+
+    denominator:
+      Float256DecimalBigUInt
+
+    binaryExponent =
+      decimalExponent
+
+  if decimalExponent >= 0:
+    numerator.float256DecimalMultiplyPowerOfFive(
+      decimalExponent
+    )
+
+    denominator.limbs =
+      @[1'u32]
+  else:
+    denominator =
+      float256DecimalPowerOfFive(
+        -decimalExponent
+      )
+
+  let extracted =
+    float256DecimalNormalizedRatio(
+      numerator,
+      denominator,
+    )
+
+  destination =
+    float256RoundPack(
+      negative,
+      extracted.exponent +
+        binaryExponent,
+      extracted.extended,
+    )
+
+  true
+
+proc parseFloat256*(
+    text: string,
+): Float256 =
+  ## Parses an ASCII decimal binary256 value or raises ValueError.
+
+  if not tryParseFloat256(
+      text,
+      result,
+  ):
+    raise newException(
+      ValueError,
+      "invalid Float256 decimal text",
+    )
