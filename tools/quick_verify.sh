@@ -131,6 +131,7 @@ python3 tools/postprocess_document_html.py
       echo "  Generated documentation diffs are reset in CI."
       echo "  Use tools/publish_docs.sh to regenerate, commit, and publish documentation."
       git checkout -- document_ja document_en
+      git clean -fd -- document_ja document_en
     else
       echo
       echo "Generated docs are not committed."
