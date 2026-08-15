@@ -4,7 +4,7 @@ All notable changes to Nim-ACL will be documented in this file.
 
 The format follows Keep a Changelog, and versions use Semantic Versioning.
 
-## [0.5.0] - Unreleased
+## [0.5.0] - 2026-08-15
 
 This release extends the public numeric and two-dimensional API surface added since v0.4.0 and aligns release documentation with the tested package surface.
 
