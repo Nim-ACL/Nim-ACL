@@ -232,3 +232,11 @@ through Japanese import paths and API names.
 - [Monotone Minima](extra/dp/monotone_minima.md)
 - [Divide-and-Conquer Optimization](extra/dp/divide_and_conquer_optimization.md)
 <!-- /NIM_ACL_CURATED_DP_OPTIMIZATION_V1 -->
+
+<!-- GRAPH_FACADE_PACKET_ONE_START -->
+## Curated graph facade
+
+| Description | Documentation | Import |
+| --- | --- | --- |
+| Curated graph representation, shortest-path, connectivity, spanning-tree, functional-graph and offline-connectivity modules. Existing direct imports remain supported. | [Graph facade](./extra/graph/graph.html) | `import atcoder/extra/graph/graph` |
+<!-- GRAPH_FACADE_PACKET_ONE_END -->

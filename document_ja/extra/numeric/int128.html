@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>128-bit integer</title>
+  <link rel="stylesheet" href="../../lib/main.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/ace-builds@1.37.5/src-min-noconflict/ace.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ace-builds@1.37.5/src-min-noconflict/mode-nim.js"></script>
+  <script>
+    window.addEventListener("load", function () {
+      if (!window.ace) return;
+
+      ace.config.set(
+        "basePath",
+        "https://cdn.jsdelivr.net/npm/ace-builds@1.37.5/src-min-noconflict/"
+      );
+
+      for (const e of document.getElementsByClassName("sample-code")) {
+        const code = e.textContent.replace(/^\n/, "").replace(/\s+$/, "");
+        e.textContent = code;
+
+        const editor = ace.edit(e);
+        editor.setTheme("ace/theme/textmate");
+        editor.getSession().setMode("ace/mode/nim");
+        editor.getSession().setUseWrapMode(false);
+        editor.setReadOnly(true);
+        editor.setShowPrintMargin(false);
+        editor.setHighlightActiveLine(false);
+        editor.setHighlightGutterLine(false);
+        editor.setOptions({
+          maxLines: Infinity,
+          minLines: 1,
+          fontSize: "14px",
+          tabSize: 2,
+          useSoftTabs: true
+        });
+
+        editor.renderer.setShowGutter(true);
+        editor.renderer.setScrollMargin(8, 8, 0, 0);
+
+        const cursor = editor.renderer.$cursorLayer;
+        if (cursor && cursor.element) {
+          cursor.element.style.display = "none";
+        }
+      }
+    });
+  </script>
+
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']],
+        processEscapes: true
+      },
+      svg: {
+        fontCache: 'global'
+      }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+<style id="nim-acl-highlight-style-v1">
+:root {
+  --nim-code-background: #f6f8fa;
+  --nim-code-foreground: #24292f;
+  --nim-code-border: #d0d7de;
+  --nim-code-line-number: #8c959f;
+  --nim-code-line-number-border: #d8dee4;
+
+  --nim-token-keyword: #8250df;
+  --nim-token-string: #0a7f37;
+  --nim-token-escape: #116329;
+  --nim-token-number: #0550ae;
+  --nim-token-comment: #6e7781;
+  --nim-token-operator: #cf222e;
+  --nim-token-punctuation: #57606a;
+  --nim-token-identifier: #24292f;
+  --nim-token-directive: #953800;
+  --nim-token-hyperlink: #0969da;
+  --nim-token-other: #24292f;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --nim-code-background: #161b22;
+    --nim-code-foreground: #c9d1d9;
+    --nim-code-border: #30363d;
+    --nim-code-line-number: #7d8590;
+    --nim-code-line-number-border: #30363d;
+
+    --nim-token-keyword: #d2a8ff;
+    --nim-token-string: #a5d6ff;
+    --nim-token-escape: #79c0ff;
+    --nim-token-number: #79c0ff;
+    --nim-token-comment: #8b949e;
+    --nim-token-operator: #ff7b72;
+    --nim-token-punctuation: #c9d1d9;
+    --nim-token-identifier: #c9d1d9;
+    --nim-token-directive: #ffa657;
+    --nim-token-hyperlink: #58a6ff;
+    --nim-token-other: #c9d1d9;
+  }
+}
+
+html[data-theme="dark"],
+html.dark,
+body.dark,
+body[data-theme="dark"] {
+  --nim-code-background: #161b22;
+  --nim-code-foreground: #c9d1d9;
+  --nim-code-border: #30363d;
+  --nim-code-line-number: #7d8590;
+  --nim-code-line-number-border: #30363d;
+
+  --nim-token-keyword: #d2a8ff;
+  --nim-token-string: #a5d6ff;
+  --nim-token-escape: #79c0ff;
+  --nim-token-number: #79c0ff;
+  --nim-token-comment: #8b949e;
+  --nim-token-operator: #ff7b72;
+  --nim-token-punctuation: #c9d1d9;
+  --nim-token-identifier: #c9d1d9;
+  --nim-token-directive: #ffa657;
+  --nim-token-hyperlink: #58a6ff;
+  --nim-token-other: #c9d1d9;
+}
+
+pre.nim-code {
+  position: relative;
+  overflow: auto;
+  box-sizing: border-box;
+  tab-size: 2;
+
+  background: var(--nim-code-background);
+  color: var(--nim-code-foreground);
+  border: 1px solid var(--nim-code-border);
+  border-radius: 7px;
+}
+
+pre.nim-code code {
+  display: block;
+  box-sizing: border-box;
+  min-width: max-content;
+
+  color: var(--nim-code-foreground);
+  background: transparent;
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    SF Mono,
+    Menlo,
+    Monaco,
+    Consolas,
+    Liberation Mono,
+    monospace;
+  line-height: 1.55;
+}
+
+pre.nim-line-numbers code {
+  counter-reset: nim-code-line;
+}
+
+pre.nim-line-numbers .code-line {
+  display: block;
+  position: relative;
+  min-height: 1.55em;
+  padding-left: 4.25rem;
+  padding-right: 1rem;
+  white-space: pre;
+}
+
+pre.nim-line-numbers .code-line::before {
+  counter-increment: nim-code-line;
+  content: counter(nim-code-line);
+
+  position: absolute;
+  left: 0;
+  top: 0;
+  box-sizing: border-box;
+  width: 3.25rem;
+  padding-right: 0.75rem;
+
+  color: var(--nim-code-line-number);
+  border-right: 1px solid var(--nim-code-line-number-border);
+  text-align: right;
+
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: none;
+}
+
+.tok-keyword {
+  color: var(--nim-token-keyword);
+  font-weight: 650;
+}
+
+.tok-string {
+  color: var(--nim-token-string);
+}
+
+.tok-escape {
+  color: var(--nim-token-escape);
+  font-weight: 600;
+}
+
+.tok-number {
+  color: var(--nim-token-number);
+}
+
+.tok-comment {
+  color: var(--nim-token-comment);
+  font-style: italic;
+}
+
+.tok-operator {
+  color: var(--nim-token-operator);
+}
+
+.tok-punctuation {
+  color: var(--nim-token-punctuation);
+}
+
+.tok-identifier {
+  color: var(--nim-token-identifier);
+}
+
+.tok-directive {
+  color: var(--nim-token-directive);
+  font-weight: 600;
+}
+
+.tok-hyperlink {
+  color: var(--nim-token-hyperlink);
+  text-decoration: underline;
+}
+
+.tok-other {
+  color: var(--nim-token-other);
+}
+</style>
+</head>
+<body>
+  <header class="site-header">
+    <a class="site-brand" href="../../index.html">
+      <img class="site-logo" src="../../lib/logo-crown.png" alt="" aria-hidden="true">
+      <span class="site-title">Nim-ACL</span>
+    </a>
+  </header>
+  <main>
+<hr>
+<p>title: 128-bit integer
+documentation_of: atcoder/extra/numeric/int128</p>
+<hr>
+<h1 id="128-bit-integer">128-bit integer</h1>
+<p>128-bitの符号なし整数 <code>UInt128</code> と符号付き整数 <code>Int128</code> を提供する。
+実装はC/C++のネイティブ <code>__int128</code> に依存しないpure Nim実装であり、
+C backendとC++ backendの両方で利用できる。</p>
+<p>内部表現は2個の <code>uint64</code> limbだが、fieldは公開されていない。
+値の生成・変換・演算には公開APIを使用する。</p>
+<p>旧module</p>
+<pre class="nim-code nim-acl-highlighted"><code class="language-nim nim-acl-highlighted"><span class="tok-keyword">import</span> <span class="tok-identifier">atcoder</span><span class="tok-operator">/</span><span class="tok-identifier">extra</span><span class="tok-operator">/</span><span class="tok-identifier">math</span><span class="tok-operator">/</span><span class="tok-identifier">int128</span>
+</code></pre>
+<p>は互換shimとして残されている。新しいコードでは次を使用する。</p>
+<pre class="nim-code nim-acl-highlighted"><code class="language-nim nim-acl-highlighted"><span class="tok-keyword">import</span> <span class="tok-identifier">atcoder</span><span class="tok-operator">/</span><span class="tok-identifier">extra</span><span class="tok-operator">/</span><span class="tok-identifier">numeric</span><span class="tok-operator">/</span><span class="tok-identifier">int128</span>
+</code></pre>
+<p>Nimのidentifierはstyle-insensitiveであるため、従来の <code>Uint128</code>、
+<code>parseUint128</code>、<code>to_Uint128</code> という表記も引き続き利用できる。
+文書上の標準表記は <code>UInt128</code>、<code>parseUInt128</code>、<code>toUInt128</code> とする。</p>
+<h2 id="_1">型</h2>
+<pre class="nim-code nim-acl-highlighted"><code class="language-nim nim-acl-highlighted"><span class="tok-identifier">UInt128</span>
+<span class="tok-identifier">Int128</span>
+</code></pre>
+<p>どちらも16 byteの固定長整数である。</p>
+<ul>
+<li><code>UInt128</code> の範囲は <code>0</code> 以上 <code>2^128 - 1</code> 以下。</li>
+<li><code>Int128</code> は128-bit two's-complement表現を用い、範囲は
+  <code>-2^127</code> 以上 <code>2^127 - 1</code> 以下。</li>
+</ul>
+<h2 id="_2">生成と変換</h2>
+<pre class="nim-code nim-acl-highlighted"><code class="language-nim nim-acl-highlighted"><span class="tok-identifier">toUInt128</span><span class="tok-punctuation">(</span><span class="tok-identifier">x</span><span class="tok-punctuation">)</span>
+<span class="tok-identifier">toInt128</span><span class="tok-punctuation">(</span><span class="tok-identifier">x</span><span class="tok-punctuation">)</span>
+
+<span class="tok-identifier">fromUInt64Words</span><span class="tok-punctuation">(</span><span class="tok-identifier">highWord</span><span class="tok-punctuation">,</span> <span class="tok-identifier">lowWord</span><span class="tok-punctuation">)</span>
+<span class="tok-identifier">fromInt128Bits</span><span class="tok-punctuation">(</span><span class="tok-identifier">highWord</span><span class="tok-punctuation">,</span> <span class="tok-identifier">lowWord</span><span class="tok-punctuation">)</span>
+
+<span class="tok-identifier">low64</span><span class="tok-punctuation">(</span><span class="tok-identifier">x</span><span class="tok-punctuation">)</span>
+<span class="tok-identifier">high64</span><span class="tok-punctuation">(</span><span class="tok-identifier">x</span><span class="tok-punctuation">)</span>
+</code></pre>
+<p><code>fromUInt64Words</code> と <code>fromInt128Bits</code> は、上位64 bitと下位64 bitから
+値を構築する。内部fieldそのものは公開されない。</p>
+<p>整数型からのconverterも提供されるため、文脈によっては通常の整数を
+直接代入できる。</p>
+<pre class="nim-code nim-acl-highlighted"><code class="language-nim nim-acl-highlighted"><span class="tok-keyword">let</span> <span class="tok-identifier">a</span><span class="tok-punctuation">:</span> <span class="tok-identifier">UInt128</span> <span class="tok-operator">=</span> <span class="tok-number">123</span>
+<span class="tok-keyword">let</span> <span class="tok-identifier">b</span><span class="tok-punctuation">:</span> <span class="tok-identifier">Int128</span> <span class="tok-operator">=</span> <span class="tok-operator">-</span><span class="tok-number">456</span>
+</code></pre>
+<h2 id="_3">基本演算</h2>
+<p>次の演算を提供する。</p>
+<pre class="nim-code nim-acl-highlighted"><code class="language-nim nim-acl-highlighted"><span class="tok-operator">+</span>
+<span class="tok-operator">-</span>
+<span class="tok-operator">*</span>
+<span class="tok-keyword">div</span>
+<span class="tok-keyword">mod</span>
+<span class="tok-keyword">shl</span>
+<span class="tok-keyword">shr</span>
+<span class="tok-keyword">and</span>
+<span class="tok-keyword">or</span>
+<span class="tok-keyword">xor</span>
+<span class="tok-keyword">not</span>
+
+<span class="tok-operator">==</span>
+<span class="tok-operator">&lt;</span>
+<span class="tok-operator">&lt;=</span>
+<span class="tok-operator">&gt;</span>
+<span class="tok-operator">&gt;=</span>
+<span class="tok-identifier">cmp</span>
+</code></pre>
+<p><code>UInt128</code> の <code>+</code>、<code>-</code>、<code>*</code> は <code>2^128</code> を法とするwrap演算である。
+<code>Int128</code> の <code>+</code>、<code>-</code>、<code>*</code> もtwo's-complement bit列上でwrapする。</p>
+<p><code>Int128</code> の <code>div</code> と <code>mod</code> は0方向へ丸める。</p>
+<pre class="nim-code nim-acl-highlighted"><code class="language-nim nim-acl-highlighted"><span class="tok-identifier">parseInt128</span><span class="tok-punctuation">(</span><span class="tok-string">&quot;-7&quot;</span><span class="tok-punctuation">)</span> <span class="tok-keyword">div</span> <span class="tok-identifier">parseInt128</span><span class="tok-punctuation">(</span><span class="tok-string">&quot;3&quot;</span><span class="tok-punctuation">)</span> <span class="tok-operator">==</span> <span class="tok-identifier">parseInt128</span><span class="tok-punctuation">(</span><span class="tok-string">&quot;-2&quot;</span><span class="tok-punctuation">)</span>
+<span class="tok-identifier">parseInt128</span><span class="tok-punctuation">(</span><span class="tok-string">&quot;-7&quot;</span><span class="tok-punctuation">)</span> <span class="tok-keyword">mod</span> <span class="tok-identifier">parseInt128</span><span class="tok-punctuation">(</span><span class="tok-string">&quot;3&quot;</span><span class="tok-punctuation">)</span> <span class="tok-operator">==</span> <span class="tok-identifier">parseInt128</span><span class="tok-punctuation">(</span><span class="tok-string">&quot;-1&quot;</span><span class="tok-punctuation">)</span>
+</code></pre>
+<p>数学的なfloor divisionが必要な場合は次を使用する。</p>
+<pre class="nim-code nim-acl-highlighted"><code class="language-nim nim-acl-highlighted"><span class="tok-identifier">floorDiv</span><span class="tok-punctuation">(</span><span class="tok-identifier">x</span><span class="tok-punctuation">,</span> <span class="tok-identifier">y</span><span class="tok-punctuation">)</span>
+<span class="tok-identifier">floorMod</span><span class="tok-punctuation">(</span><span class="tok-identifier">x</span><span class="tok-punctuation">,</span> <span class="tok-identifier">y</span><span class="tok-punctuation">)</span>
+</code></pre>
+<pre class="nim-code nim-acl-highlighted"><code class="language-nim nim-acl-highlighted"><span class="tok-identifier">floorDiv</span><span class="tok-punctuation">(</span><span class="tok-identifier">parseInt128</span><span class="tok-punctuation">(</span><span class="tok-string">&quot;-7&quot;</span><span class="tok-punctuation">)</span><span class="tok-punctuation">,</span> <span class="tok-identifier">parseInt128</span><span class="tok-punctuation">(</span><span class="tok-string">&quot;3&quot;</span><span class="tok-punctuation">)</span><span class="tok-punctuation">)</span> <span class="tok-operator">==</span> <span class="tok-identifier">parseInt128</span><span class="tok-punctuation">(</span><span class="tok-string">&quot;-3&quot;</span><span class="tok-punctuation">)</span>
+<span class="tok-identifier">floorMod</span><span class="tok-punctuation">(</span><span class="tok-identifier">parseInt128</span><span class="tok-punctuation">(</span><span class="tok-string">&quot;-7&quot;</span><span class="tok-punctuation">)</span><span class="tok-punctuation">,</span> <span class="tok-identifier">parseInt128</span><span class="tok-punctuation">(</span><span class="tok-string">&quot;3&quot;</span><span class="tok-punctuation">)</span><span class="tok-punctuation">)</span> <span class="tok-operator">==</span> <span class="tok-identifier">parseInt128</span><span class="tok-punctuation">(</span><span class="tok-string">&quot;2&quot;</span><span class="tok-punctuation">)</span>
+</code></pre>
+<p>0除算は <code>DivByZeroDefect</code> を送出する。</p>
+<h2 id="wrapoverflowsaturating">wrap・overflow・saturating演算</h2>
+<h3 id="wrapping">wrapping</h3>
+<pre class="nim-code nim-acl-highlighted"><code class="language-nim nim-acl-highlighted"><span class="tok-identifier">wrappingAdd</span><span class="tok-punctuation">(</span><span class="tok-identifier">a</span><span class="tok-punctuation">,</span> <span class="tok-identifier">b</span><span class="tok-punctuation">)</span>
+<span class="tok-identifier">wrappingSub</span><span class="tok-punctuation">(</span><span class="tok-identifier">a</span><span class="tok-punctuation">,</span> <span class="tok-identifier">b</span><span class="tok-punctuation">)</span>
+<span class="tok-identifier">wrappingMul</span><span class="tok-punctuation">(</span><span class="tok-identifier">a</span><span class="tok-punctuation">,</span> <span class="tok-identifier">b</span><span class="tok-punctuation">)</span>
+</code></pre>
+<p>通常の <code>+</code>、<code>-</code>、<code>*</code> と同じwrap結果を明示的に得る。</p>
+<h3 id="overflowing">overflowing</h3>
+<pre class="nim-code nim-acl-highlighted"><code class="language-nim nim-acl-highlighted"><span class="tok-identifier">overflowingAdd</span><span class="tok-punctuation">(</span><span class="tok-identifier">a</span><span class="tok-punctuation">,</span> <span class="tok-identifier">b</span><span class="tok-punctuation">)</span>
+<span class="tok-identifier">overflowingSub</span><span class="tok-punctuation">(</span><span class="tok-identifier">a</span><span class="tok-punctuation">,</span> <span class="tok-identifier">b</span><span class="tok-punctuation">)</span>
+<span class="tok-identifier">overflowingMul</span><span class="tok-punctuation">(</span><span class="tok-identifier">a</span><span class="tok-punctuation">,</span> <span class="tok-identifier">b</span><span class="tok-punctuation">)</span>
+</code></pre>
+<p>返り値は次のnamed tupleである。</p>
+<pre class="nim-code nim-acl-highlighted"><code class="language-nim nim-acl-highlighted"><span class="tok-keyword">tuple</span><span class="tok-punctuation">[</span><span class="tok-identifier">value</span><span class="tok-punctuation">:</span> <span class="tok-identifier">UInt128</span><span class="tok-punctuation">,</span> <span class="tok-identifier">overflow</span><span class="tok-punctuation">:</span> <span class="tok-identifier">bool</span><span class="tok-punctuation">]</span>
+<span class="tok-keyword">tuple</span><span class="tok-punctuation">[</span><span class="tok-identifier">value</span><span class="tok-punctuation">:</span> <span class="tok-identifier">Int128</span><span class="tok-punctuation">,</span> <span class="tok-identifier">overflow</span><span class="tok-punctuation">:</span> <span class="tok-identifier">bool</span><span class="tok-punctuation">]</span>
+</code></pre>
+<p><code>value</code> はwrap後の値、<code>overflow</code> は数学的な結果が型の範囲外かを表す。</p>
+<pre class="nim-code nim-acl-highlighted"><code class="language-nim nim-acl-highlighted"><span class="tok-keyword">let</span> <span class="tok-identifier">maximum</span> <span class="tok-operator">=</span>
+  <span class="tok-identifier">parseUInt128</span><span class="tok-punctuation">(</span><span class="tok-string">&quot;340282366920938463463374607431768211455&quot;</span><span class="tok-punctuation">)</span>
+
+<span class="tok-keyword">let</span> <span class="tok-identifier">result</span> <span class="tok-operator">=</span>
+  <span class="tok-identifier">overflowingAdd</span><span class="tok-punctuation">(</span><span class="tok-identifier">maximum</span><span class="tok-punctuation">,</span> <span class="tok-identifier">parseUInt128</span><span class="tok-punctuation">(</span><span class="tok-string">&quot;1&quot;</span><span class="tok-punctuation">)</span><span class="tok-punctuation">)</span>
+
+<span class="tok-identifier">doAssert</span> <span class="tok-identifier">result</span><span class="tok-operator">.</span><span class="tok-identifier">overflow</span>
+<span class="tok-identifier">doAssert</span> <span class="tok-identifier">result</span><span class="tok-operator">.</span><span class="tok-identifier">value</span> <span class="tok-operator">==</span> <span class="tok-identifier">parseUInt128</span><span class="tok-punctuation">(</span><span class="tok-string">&quot;0&quot;</span><span class="tok-punctuation">)</span>
+</code></pre>
+<h3 id="saturating">saturating</h3>
+<pre class="nim-code nim-acl-highlighted"><code class="language-nim nim-acl-highlighted"><span class="tok-identifier">saturatingAdd</span><span class="tok-punctuation">(</span><span class="tok-identifier">a</span><span class="tok-punctuation">,</span> <span class="tok-identifier">b</span><span class="tok-punctuation">)</span>
+<span class="tok-identifier">saturatingSub</span><span class="tok-punctuation">(</span><span class="tok-identifier">a</span><span class="tok-punctuation">,</span> <span class="tok-identifier">b</span><span class="tok-punctuation">)</span>
+<span class="tok-identifier">saturatingMul</span><span class="tok-punctuation">(</span><span class="tok-identifier">a</span><span class="tok-punctuation">,</span> <span class="tok-identifier">b</span><span class="tok-punctuation">)</span>
+</code></pre>
+<p>overflowした場合、結果をその型の最小値または最大値へ固定する。</p>
+<h2 id="bit">bit演算</h2>
+<pre class="nim-code nim-acl-highlighted"><code class="language-nim nim-acl-highlighted"><span class="tok-identifier">countLeadingZeroBits</span><span class="tok-punctuation">(</span><span class="tok-identifier">x</span><span class="tok-punctuation">)</span>
+<span class="tok-identifier">countTrailingZeroBits</span><span class="tok-punctuation">(</span><span class="tok-identifier">x</span><span class="tok-punctuation">)</span>
+<span class="tok-identifier">popcount</span><span class="tok-punctuation">(</span><span class="tok-identifier">x</span><span class="tok-punctuation">)</span>
+
+<span class="tok-identifier">rotateLeft</span><span class="tok-punctuation">(</span><span class="tok-identifier">x</span><span class="tok-punctuation">,</span> <span class="tok-identifier">distance</span><span class="tok-punctuation">)</span>
+<span class="tok-identifier">rotateRight</span><span class="tok-punctuation">(</span><span class="tok-identifier">x</span><span class="tok-punctuation">,</span> <span class="tok-identifier">distance</span><span class="tok-punctuation">)</span>
+</code></pre>
+<p>0に対するleading zero countとtrailing zero countは128である。</p>
+<p>rotationの距離は128を法として正規化される。負の距離も利用できる。</p>
+<pre class="nim-code nim-acl-highlighted"><code class="language-nim nim-acl-highlighted"><span class="tok-keyword">let</span> <span class="tok-identifier">one</span> <span class="tok-operator">=</span> <span class="tok-identifier">parseUInt128</span><span class="tok-punctuation">(</span><span class="tok-string">&quot;1&quot;</span><span class="tok-punctuation">)</span>
+
+<span class="tok-identifier">doAssert</span> <span class="tok-identifier">rotateLeft</span><span class="tok-punctuation">(</span><span class="tok-identifier">one</span><span class="tok-punctuation">,</span> <span class="tok-number">127</span><span class="tok-punctuation">)</span> <span class="tok-operator">==</span>
+  <span class="tok-identifier">parseUInt128</span><span class="tok-punctuation">(</span><span class="tok-string">&quot;170141183460469231731687303715884105728&quot;</span><span class="tok-punctuation">)</span>
+
+<span class="tok-identifier">doAssert</span> <span class="tok-identifier">rotateLeft</span><span class="tok-punctuation">(</span><span class="tok-identifier">one</span><span class="tok-punctuation">,</span> <span class="tok-operator">-</span><span class="tok-number">1</span><span class="tok-punctuation">)</span> <span class="tok-operator">==</span>
+  <span class="tok-identifier">rotateRight</span><span class="tok-punctuation">(</span><span class="tok-identifier">one</span><span class="tok-punctuation">,</span> <span class="tok-number">1</span><span class="tok-punctuation">)</span>
+</code></pre>
+<p><code>Int128</code> のbit countとrotationは、その128-bit two's-complement bit列に
+対して行われる。</p>
+<h2 id="_4">文字列変換</h2>
+<pre class="nim-code nim-acl-highlighted"><code class="language-nim nim-acl-highlighted"><span class="tok-identifier">parseUInt128</span><span class="tok-punctuation">(</span><span class="tok-identifier">s</span><span class="tok-punctuation">)</span>
+<span class="tok-identifier">parseInt128</span><span class="tok-punctuation">(</span><span class="tok-identifier">s</span><span class="tok-punctuation">)</span>
+<span class="tok-operator">$</span> <span class="tok-identifier">value</span>
+</code></pre>
+<p>10進文字列との相互変換を提供する。</p>
+<pre class="nim-code nim-acl-highlighted"><code class="language-nim nim-acl-highlighted"><span class="tok-keyword">let</span> <span class="tok-identifier">x</span> <span class="tok-operator">=</span>
+  <span class="tok-identifier">parseUInt128</span><span class="tok-punctuation">(</span><span class="tok-string">&quot;18446744073709551616&quot;</span><span class="tok-punctuation">)</span>
+
+<span class="tok-identifier">doAssert</span> <span class="tok-operator">$</span><span class="tok-identifier">x</span> <span class="tok-operator">==</span> <span class="tok-string">&quot;18446744073709551616&quot;</span>
+
+<span class="tok-keyword">let</span> <span class="tok-identifier">y</span> <span class="tok-operator">=</span>
+  <span class="tok-identifier">parseInt128</span><span class="tok-punctuation">(</span><span class="tok-string">&quot;-170141183460469231731687303715884105728&quot;</span><span class="tok-punctuation">)</span>
+
+<span class="tok-identifier">doAssert</span> <span class="tok-operator">$</span><span class="tok-identifier">y</span> <span class="tok-operator">==</span>
+  <span class="tok-string">&quot;-170141183460469231731687303715884105728&quot;</span>
+</code></pre>
+<p>空文字列、数字を含まない符号だけの文字列、10進数字以外を含む文字列は
+<code>ValueError</code> となる。</p>
+<h2 id="_5">その他</h2>
+<pre class="nim-code nim-acl-highlighted"><code class="language-nim nim-acl-highlighted"><span class="tok-identifier">abs</span><span class="tok-punctuation">(</span><span class="tok-identifier">x</span><span class="tok-punctuation">)</span>
+<span class="tok-identifier">hash</span><span class="tok-punctuation">(</span><span class="tok-identifier">x</span><span class="tok-punctuation">)</span>
+
+<span class="tok-identifier">pow</span><span class="tok-punctuation">(</span><span class="tok-identifier">base</span><span class="tok-punctuation">,</span> <span class="tok-identifier">exponent</span><span class="tok-punctuation">,</span> <span class="tok-identifier">modulus</span><span class="tok-punctuation">)</span>
+<span class="tok-identifier">base</span> <span class="tok-operator">^</span> <span class="tok-identifier">exponent</span>
+
+<span class="tok-identifier">inc</span><span class="tok-punctuation">(</span><span class="tok-identifier">x</span><span class="tok-punctuation">)</span>
+<span class="tok-identifier">dec</span><span class="tok-punctuation">(</span><span class="tok-identifier">x</span><span class="tok-punctuation">)</span>
+
+<span class="tok-operator">+=</span>
+<span class="tok-operator">-=</span>
+<span class="tok-operator">*=</span>
+</code></pre>
+<p><code>Int128</code> の負の指数は <code>ValueError</code> となる。
+modular powerで法が0の場合は <code>DivByZeroDefect</code> となる。</p>
+<h2 id="_6">使用例</h2>
+<pre class="nim-code nim-acl-highlighted nim-line-numbers"><code class="language-nim nim-acl-highlighted"><span class="code-line"><span class="tok-keyword">import</span> <span class="tok-identifier">atcoder</span><span class="tok-operator">/</span><span class="tok-identifier">extra</span><span class="tok-operator">/</span><span class="tok-identifier">numeric</span><span class="tok-operator">/</span><span class="tok-identifier">int128</span></span><span class="code-line"></span><span class="code-line"><span class="tok-keyword">let</span> <span class="tok-identifier">a</span> <span class="tok-operator">=</span></span><span class="code-line">  <span class="tok-identifier">parseUInt128</span><span class="tok-punctuation">(</span><span class="tok-string">&quot;123456789012345678901234567890&quot;</span><span class="tok-punctuation">)</span></span><span class="code-line"></span><span class="code-line"><span class="tok-keyword">let</span> <span class="tok-identifier">b</span> <span class="tok-operator">=</span></span><span class="code-line">  <span class="tok-identifier">parseUInt128</span><span class="tok-punctuation">(</span><span class="tok-string">&quot;9876543210987654321&quot;</span><span class="tok-punctuation">)</span></span><span class="code-line"></span><span class="code-line"><span class="tok-identifier">echo</span> <span class="tok-identifier">a</span> <span class="tok-operator">+</span> <span class="tok-identifier">b</span></span><span class="code-line"><span class="tok-identifier">echo</span> <span class="tok-identifier">a</span> <span class="tok-operator">*</span> <span class="tok-identifier">b</span></span><span class="code-line"><span class="tok-identifier">echo</span> <span class="tok-identifier">a</span> <span class="tok-keyword">div</span> <span class="tok-identifier">b</span></span><span class="code-line"><span class="tok-identifier">echo</span> <span class="tok-identifier">a</span> <span class="tok-keyword">mod</span> <span class="tok-identifier">b</span></span><span class="code-line"></span><span class="code-line"><span class="tok-keyword">let</span> <span class="tok-identifier">overflow</span> <span class="tok-operator">=</span></span><span class="code-line">  <span class="tok-identifier">overflowingMul</span><span class="tok-punctuation">(</span><span class="tok-identifier">a</span><span class="tok-punctuation">,</span> <span class="tok-identifier">b</span><span class="tok-punctuation">)</span></span><span class="code-line"></span><span class="code-line"><span class="tok-identifier">echo</span> <span class="tok-identifier">overflow</span><span class="tok-operator">.</span><span class="tok-identifier">value</span></span><span class="code-line"><span class="tok-identifier">echo</span> <span class="tok-identifier">overflow</span><span class="tok-operator">.</span><span class="tok-identifier">overflow</span></span></code></pre>
+<h2 id="_7">互換性</h2>
+<p>従来の次のimportは引き続き利用できる。</p>
+<pre class="nim-code nim-acl-highlighted"><code class="language-nim nim-acl-highlighted"><span class="tok-keyword">import</span> <span class="tok-identifier">atcoder</span><span class="tok-operator">/</span><span class="tok-identifier">extra</span><span class="tok-operator">/</span><span class="tok-identifier">math</span><span class="tok-operator">/</span><span class="tok-identifier">int128</span>
+</code></pre>
+<p>この旧pathはcanonical implementationをre-exportする互換shimである。
+新規コードでは <code>atcoder/extra/numeric/int128</code> を推奨する。</p>
+  </main>
+</body>
+</html>

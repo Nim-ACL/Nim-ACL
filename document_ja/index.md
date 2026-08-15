@@ -202,6 +202,8 @@ Nim-ACLはAtCoder Library互換APIに加えて、
 | atcoder/extra/math/fps は、modint 係数の形式的べき級数を短く書くための convenience facade です。 | [FPS facade](./extra/math/fps.html) | `import atcoder/extra/math/fps` | `useFPSPrecTemplate, F, useFPS, useFPSDecl` |
 | このページは自動生成された下書きです。 | [gaussian_elimination_bit](./extra/math/gaussian_elimination_bit.html) | `import atcoder/extra/math/gaussian_elimination_bit` | `base` |
 | このページは自動生成された下書きです。 | [int128](./extra/math/int128.html) | `import atcoder/extra/math/int128` | `Int128, Uint128, to_Int128, to_Uint128, to_int` |
+| このページは自動生成された下書きです。 | [int128 (numeric)](./extra/numeric/int128.html) | `import atcoder/extra/numeric/int128` | `Int128, Uint128, to_Int128, to_Uint128, to_int` |
+| このページは自動生成された下書きです。 | [int256 (numeric)](./extra/numeric/int256.html) | `import atcoder/extra/numeric/int256` | `UInt256, Int256, parseUInt256, parseInt256` |
 | このページは自動生成された下書きです。 | [kitamasa](./extra/math/kitamasa.html) | `import atcoder/extra/math/kitamasa` | `kitamasa` |
 | このページは自動生成された下書きです。 | [lagrange_polynomial](./extra/math/lagrange_polynomial.html) | `import atcoder/extra/math/lagrange_polynomial` | `lagrange_polynomial` |
 | このページは自動生成された下書きです。 | [matrix](./extra/math/matrix.html) | `import atcoder/extra/math/matrix` | `StaticMatrix, DynamicMatrix, DynamicVector, StaticMatrixObj, StaticVector` |
@@ -653,3 +655,11 @@ Nim-ACL の正式APIを、日本語のimport名と
 
 - [日本語API一覧](extra/ja/index.md)
 <!-- /NIM_ACL_JAPANESE_FACADE_INDEX_V1 -->
+
+<!-- GRAPH_FACADE_PACKET_ONE_START -->
+## グラフ facade
+
+| 概要 | ドキュメント | Import |
+| --- | --- | --- |
+| グラフ表現、最短路、連結性、最小全域木、functional graph、offline connectivityをまとめたcurated facadeです。既存のdirect importも維持します。 | [Graph facade](./extra/graph/graph.html) | `import atcoder/extra/graph/graph` |
+<!-- GRAPH_FACADE_PACKET_ONE_END -->

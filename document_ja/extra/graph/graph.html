@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>グラフ facade</title>
+  <link rel="stylesheet" href="../../lib/main.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/ace-builds@1.37.5/src-min-noconflict/ace.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ace-builds@1.37.5/src-min-noconflict/mode-nim.js"></script>
+  <script>
+    window.addEventListener("load", function () {
+      if (!window.ace) return;
+
+      ace.config.set(
+        "basePath",
+        "https://cdn.jsdelivr.net/npm/ace-builds@1.37.5/src-min-noconflict/"
+      );
+
+      for (const e of document.getElementsByClassName("sample-code")) {
+        const code = e.textContent.replace(/^\n/, "").replace(/\s+$/, "");
+        e.textContent = code;
+
+        const editor = ace.edit(e);
+        editor.setTheme("ace/theme/textmate");
+        editor.getSession().setMode("ace/mode/nim");
+        editor.getSession().setUseWrapMode(false);
+        editor.setReadOnly(true);
+        editor.setShowPrintMargin(false);
+        editor.setHighlightActiveLine(false);
+        editor.setHighlightGutterLine(false);
+        editor.setOptions({
+          maxLines: Infinity,
+          minLines: 1,
+          fontSize: "14px",
+          tabSize: 2,
+          useSoftTabs: true
+        });
+
+        editor.renderer.setShowGutter(true);
+        editor.renderer.setScrollMargin(8, 8, 0, 0);
+
+        const cursor = editor.renderer.$cursorLayer;
+        if (cursor && cursor.element) {
+          cursor.element.style.display = "none";
+        }
+      }
+    });
+  </script>
+
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']],
+        processEscapes: true
+      },
+      svg: {
+        fontCache: 'global'
+      }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+<style id="nim-acl-highlight-style-v1">
+:root {
+  --nim-code-background: #f6f8fa;
+  --nim-code-foreground: #24292f;
+  --nim-code-border: #d0d7de;
+  --nim-code-line-number: #8c959f;
+  --nim-code-line-number-border: #d8dee4;
+
+  --nim-token-keyword: #8250df;
+  --nim-token-string: #0a7f37;
+  --nim-token-escape: #116329;
+  --nim-token-number: #0550ae;
+  --nim-token-comment: #6e7781;
+  --nim-token-operator: #cf222e;
+  --nim-token-punctuation: #57606a;
+  --nim-token-identifier: #24292f;
+  --nim-token-directive: #953800;
+  --nim-token-hyperlink: #0969da;
+  --nim-token-other: #24292f;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --nim-code-background: #161b22;
+    --nim-code-foreground: #c9d1d9;
+    --nim-code-border: #30363d;
+    --nim-code-line-number: #7d8590;
+    --nim-code-line-number-border: #30363d;
+
+    --nim-token-keyword: #d2a8ff;
+    --nim-token-string: #a5d6ff;
+    --nim-token-escape: #79c0ff;
+    --nim-token-number: #79c0ff;
+    --nim-token-comment: #8b949e;
+    --nim-token-operator: #ff7b72;
+    --nim-token-punctuation: #c9d1d9;
+    --nim-token-identifier: #c9d1d9;
+    --nim-token-directive: #ffa657;
+    --nim-token-hyperlink: #58a6ff;
+    --nim-token-other: #c9d1d9;
+  }
+}
+
+html[data-theme="dark"],
+html.dark,
+body.dark,
+body[data-theme="dark"] {
+  --nim-code-background: #161b22;
+  --nim-code-foreground: #c9d1d9;
+  --nim-code-border: #30363d;
+  --nim-code-line-number: #7d8590;
+  --nim-code-line-number-border: #30363d;
+
+  --nim-token-keyword: #d2a8ff;
+  --nim-token-string: #a5d6ff;
+  --nim-token-escape: #79c0ff;
+  --nim-token-number: #79c0ff;
+  --nim-token-comment: #8b949e;
+  --nim-token-operator: #ff7b72;
+  --nim-token-punctuation: #c9d1d9;
+  --nim-token-identifier: #c9d1d9;
+  --nim-token-directive: #ffa657;
+  --nim-token-hyperlink: #58a6ff;
+  --nim-token-other: #c9d1d9;
+}
+
+pre.nim-code {
+  position: relative;
+  overflow: auto;
+  box-sizing: border-box;
+  tab-size: 2;
+
+  background: var(--nim-code-background);
+  color: var(--nim-code-foreground);
+  border: 1px solid var(--nim-code-border);
+  border-radius: 7px;
+}
+
+pre.nim-code code {
+  display: block;
+  box-sizing: border-box;
+  min-width: max-content;
+
+  color: var(--nim-code-foreground);
+  background: transparent;
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    SF Mono,
+    Menlo,
+    Monaco,
+    Consolas,
+    Liberation Mono,
+    monospace;
+  line-height: 1.55;
+}
+
+pre.nim-line-numbers code {
+  counter-reset: nim-code-line;
+}
+
+pre.nim-line-numbers .code-line {
+  display: block;
+  position: relative;
+  min-height: 1.55em;
+  padding-left: 4.25rem;
+  padding-right: 1rem;
+  white-space: pre;
+}
+
+pre.nim-line-numbers .code-line::before {
+  counter-increment: nim-code-line;
+  content: counter(nim-code-line);
+
+  position: absolute;
+  left: 0;
+  top: 0;
+  box-sizing: border-box;
+  width: 3.25rem;
+  padding-right: 0.75rem;
+
+  color: var(--nim-code-line-number);
+  border-right: 1px solid var(--nim-code-line-number-border);
+  text-align: right;
+
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: none;
+}
+
+.tok-keyword {
+  color: var(--nim-token-keyword);
+  font-weight: 650;
+}
+
+.tok-string {
+  color: var(--nim-token-string);
+}
+
+.tok-escape {
+  color: var(--nim-token-escape);
+  font-weight: 600;
+}
+
+.tok-number {
+  color: var(--nim-token-number);
+}
+
+.tok-comment {
+  color: var(--nim-token-comment);
+  font-style: italic;
+}
+
+.tok-operator {
+  color: var(--nim-token-operator);
+}
+
+.tok-punctuation {
+  color: var(--nim-token-punctuation);
+}
+
+.tok-identifier {
+  color: var(--nim-token-identifier);
+}
+
+.tok-directive {
+  color: var(--nim-token-directive);
+  font-weight: 600;
+}
+
+.tok-hyperlink {
+  color: var(--nim-token-hyperlink);
+  text-decoration: underline;
+}
+
+.tok-other {
+  color: var(--nim-token-other);
+}
+</style>
+</head>
+<body>
+  <header class="site-header">
+    <a class="site-brand" href="../../index.html">
+      <img class="site-logo" src="../../lib/logo-crown.png" alt="" aria-hidden="true">
+      <span class="site-title">Nim-ACL</span>
+    </a>
+  </header>
+  <main>
+<h1 id="facade">グラフ facade</h1>
+<p><code>atcoder/extra/graph/graph</code> は、利用頻度の高いグラフアルゴリズムをまとめてimportするための curated facadeです。
+既存moduleのうち凍結済みの範囲だけをre-exportし、アルゴリズムの再実装やwrapper APIの追加は行いません。</p>
+<pre class="nim-code nim-acl-highlighted"><code class="language-nim nim-acl-highlighted"><span class="tok-keyword">import</span> <span class="tok-identifier">atcoder</span><span class="tok-operator">/</span><span class="tok-identifier">extra</span><span class="tok-operator">/</span><span class="tok-identifier">graph</span><span class="tok-operator">/</span><span class="tok-identifier">graph</span>
+</code></pre>
+<h2 id="_1">互換性方針</h2>
+<ul>
+<li>既存のdirect importは引き続き利用できます。</li>
+<li>細かな制御や未収録algorithmが必要な場合、direct module importが上級利用者向けの正式経路です。</li>
+<li>既存moduleの改名・移動・削除・自動deprecationは行いません。</li>
+<li>export-allではなく、選定済みmoduleだけを公開します。</li>
+</ul>
+<h2 id="module">収録module</h2>
+<table>
+<thead>
+<tr>
+<th>分類</th>
+<th>Module</th>
+<th>Direct import</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>グラフ表現</td>
+<td><code>graph_template</code></td>
+<td><code>import atcoder/extra/graph/graph_template</code></td>
+</tr>
+<tr>
+<td>最短路</td>
+<td><code>dijkstra</code></td>
+<td><code>import atcoder/extra/graph/dijkstra</code></td>
+</tr>
+<tr>
+<td>最短路</td>
+<td><code>bellman_ford</code></td>
+<td><code>import atcoder/extra/graph/bellman_ford</code></td>
+</tr>
+<tr>
+<td>全点対最短路</td>
+<td><code>warshall_floyd</code></td>
+<td><code>import atcoder/extra/graph/warshall_floyd</code></td>
+</tr>
+<tr>
+<td>DAG</td>
+<td><code>topological_sort</code></td>
+<td><code>import atcoder/extra/graph/topological_sort</code></td>
+</tr>
+<tr>
+<td>連結性</td>
+<td><code>lowlink</code></td>
+<td><code>import atcoder/extra/graph/lowlink</code></td>
+</tr>
+<tr>
+<td>閉路検出</td>
+<td><code>cycle_detection</code></td>
+<td><code>import atcoder/extra/graph/cycle_detection</code></td>
+</tr>
+<tr>
+<td>最小全域木</td>
+<td><code>kruskal</code></td>
+<td><code>import atcoder/extra/graph/kruskal</code></td>
+</tr>
+<tr>
+<td>最小全域木</td>
+<td><code>prim</code></td>
+<td><code>import atcoder/extra/graph/prim</code></td>
+</tr>
+<tr>
+<td>functional graph</td>
+<td><code>functional_graph</code></td>
+<td><code>import atcoder/extra/graph/functional_graph</code></td>
+</tr>
+<tr>
+<td>offline connectivity</td>
+<td><code>offline_dynamic_connectivity</code></td>
+<td><code>import atcoder/extra/graph/offline_dynamic_connectivity</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="_2">名前の衝突</h2>
+<p>複数moduleに現れる一般的なexport名があります: <code>&lt;</code>, <code>[]</code>, <code>dst</code>, <code>id</code>, <code>len</code>, <code>path</code>, <code>src</code>, <code>weight</code>。
+facade全体と代表symbolは、Nim 2.2.10／2.2.4およびC／C++ backendでcompile確認されています。
+曖昧な一般名を使う場合は、対象moduleをdirect importしてください。</p>
+<h2 id="_3">今回の対象外</h2>
+<ul>
+<li><code>STATIC_GRAPH_ALTERNATIVE_REPRESENTATION</code></li>
+<li><code>DIJKSTRA_RADIX_HEAP</code></li>
+<li><code>MULTI_DIMENSIONAL_DIJKSTRA</code></li>
+<li><code>FLOW_AND_MIN_COST_FLOW</code></li>
+<li><code>MATCHING_AND_ASSIGNMENT</code></li>
+<li><code>ADVANCED_UNDIRECTED_DECOMPOSITION</code></li>
+<li><code>EULER_TOUR_AND_TREE_ALGORITHMS</code></li>
+<li><code>REROOTING</code></li>
+<li><code>GRAPH_VISUALIZATION</code></li>
+<li><code>CHROMATIC_NUMBER</code></li>
+<li><code>MAXIMUM_INDEPENDENT_SET</code></li>
+<li><code>BIPARTITE_EDGE_COLORING</code></li>
+<li><code>MINIMUM_ARBORESCENCE</code></li>
+<li><code>RAW_ADD_REMOVE_ODC_EVENT_BUILDER</code></li>
+<li><code>GLOBAL_ALL_LIBRARY_FACADE</code></li>
+</ul>
+  </main>
+</body>
+</html>
