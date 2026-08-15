@@ -1,90 +1,234 @@
 #!/usr/bin/env bash
-set -u
+set -euo pipefail
 
-LOG="${NACL_PUBLISH_DOCS_LOG:-/tmp/nacl_publish_docs.log}"
-STATUS=OK
-STEP=init
+PROJECT_KEY="Nim-ACL"
 
-{
-  set -e
+die() {
+  echo "PUBLISH_DOCS_FAIL: $*" >&2
+  exit 1
+}
 
-  STEP="enter repo"
-  cd "$(dirname "$0")/.."
+ROOT="$(
+  git rev-parse \
+    --show-toplevel
+)"
 
-  STEP="check master"
-  current_branch="$(git branch --show-current)"
-  test "$current_branch" = "master"
+cd "$ROOT"
 
-  STEP="pull master"
-  git pull origin master
+SOURCE_BRANCH="$(
+  git branch \
+    --show-current
+)"
 
-  STEP="check clean before docs"
-  test -z "$(git status --porcelain)"
+SOURCE_HEAD="$(
+  git rev-parse HEAD
+)"
 
-  STEP="generate docs"
-  if [ -x .venv-docs/bin/python ]; then
-    .venv-docs/bin/python tools/generate_document.py
-  else
-    python3 tools/generate_document.py
-# NIM_ACL_DOCUMENT_HIGHLIGHT_FALLBACK_V1
-python3 tools/postprocess_document_html.py
-  fi
+[[ "$SOURCE_BRANCH" == "master" ]] ||
+  die "publication source must be master"
 
-  STEP="commit generated docs if needed"
-  if [ -n "$(git status --porcelain document_ja document_en)" ]; then
-    git add document_ja document_en
-    git commit -m "Regenerate documentation"
-    git push origin master
-  fi
+[[ -z "$(
+  git status \
+    --porcelain=v1 \
+    --untracked-files=all
+)" ]] ||
+  die "publication source worktree must be clean"
 
-  STEP="publish gh-pages"
-  tmp="$(mktemp -d)"
-  git fetch origin gh-pages
-  git worktree add -B gh-pages "$tmp/gh-pages" origin/gh-pages
+USER_NAME="$(
+  git config user.name \
+  || true
+)"
 
-  rsync -a --delete document_ja/ "$tmp/gh-pages/document_ja/"
-  rsync -a --delete document_en/ "$tmp/gh-pages/document_en/"
-  touch "$tmp/gh-pages/.nojekyll"
+USER_EMAIL="$(
+  git config user.email \
+  || true
+)"
 
-  (
-    cd "$tmp/gh-pages"
-    if [ -n "$(git status --porcelain)" ]; then
-      git add document_ja document_en .nojekyll
-      git commit -m "Publish generated documentation"
-      git push origin gh-pages
-    fi
-  )
+[[ -n "$USER_NAME" ]] ||
+  die "git user.name is required"
 
-  git worktree remove "$tmp/gh-pages"
-  rmdir "$tmp" 2>/dev/null || true
+[[ -n "$USER_EMAIL" ]] ||
+  die "git user.email is required"
 
-  STEP="live docs sanity"
-  curl -fsSL "https://nim-acl.github.io/Nim-ACL/document_ja/index.html?cacheBust=$(date +%s)" \
-    | grep -E "FPS facade|extra/math/fps.html"
-  curl -fsSL "https://nim-acl.github.io/Nim-ACL/document_ja/extra/monoid/monoid.html?cacheBust=$(date +%s)" \
-    | grep -E "useMonoid|MonoidOf|ActedMonoidOf"
-  curl -fsSL "https://nim-acl.github.io/Nim-ACL/document_ja/extra/graph/dijkstra.html?cacheBust=$(date +%s)" \
-    | grep -E "基本例|dijkstra|dijkstra01"
-
-  STEP="final clean"
-  test -z "$(git status --porcelain)"
-
-} >"$LOG" 2>&1 || STATUS=NG
-
-echo
-echo "===== NACL RESULT START ====="
-echo "STATUS: $STATUS"
-echo "STEP: $STEP"
-echo "LOG: $LOG"
-
-if [ "$STATUS" = OK ]; then
-  echo "SUMMARY: docs generated, published, and live-checked"
+if [[ -x "$ROOT/.venv-docs/bin/python" ]]; then
+  DOC_PYTHON="$ROOT/.venv-docs/bin/python"
 else
-  echo "SUMMARY: docs publish failed"
-  echo "LAST_LOG_LINES:"
-  tail -n 120 "$LOG"
+  DOC_PYTHON="$(
+    command -v python3
+  )"
 fi
 
-echo "===== NACL RESULT END ====="
+[[ -x "$DOC_PYTHON" ]] ||
+  die "documentation Python is unavailable"
 
-[ "$STATUS" = OK ]
+fetch_publication_refs() {
+  git fetch \
+    origin \
+    '+refs/heads/master:refs/remotes/origin/master' \
+    '+refs/heads/gh-pages:refs/remotes/origin/gh-pages'
+}
+
+fetch_publication_refs
+
+[[ "$(
+  git rev-parse origin/master
+)" == "$SOURCE_HEAD" ]] ||
+  die "local master must exactly match origin/master"
+
+TMP="$(
+  mktemp -d \
+    "${TMPDIR:-/tmp}/nim_acl_publish_docs.XXXXXX"
+)"
+
+SOURCE_WT="$TMP/source"
+PAGES_WT="$TMP/gh-pages"
+
+SOURCE_WT_REGISTERED="NO"
+PAGES_WT_REGISTERED="NO"
+
+cleanup() {
+  rc=$?
+  trap - EXIT
+
+  if [[ "$PAGES_WT_REGISTERED" == "YES" ]]; then
+    git -C "$ROOT" \
+      worktree remove \
+      --force \
+      "$PAGES_WT" \
+      >/dev/null 2>&1 \
+      || true
+  fi
+
+  if [[ "$SOURCE_WT_REGISTERED" == "YES" ]]; then
+    git -C "$ROOT" \
+      worktree remove \
+      --force \
+      "$SOURCE_WT" \
+      >/dev/null 2>&1 \
+      || true
+  fi
+
+  git -C "$ROOT" \
+    worktree prune \
+    >/dev/null 2>&1 \
+    || true
+
+  rm -rf "$TMP"
+
+  exit "$rc"
+}
+
+trap cleanup EXIT
+
+git worktree add \
+  --detach \
+  "$SOURCE_WT" \
+  "$SOURCE_HEAD"
+
+SOURCE_WT_REGISTERED="YES"
+
+(
+  cd "$SOURCE_WT"
+
+  "$DOC_PYTHON" \
+    tools/generate_document.py
+)
+
+# Fail closed if master changed while docs were being generated.
+fetch_publication_refs
+
+[[ "$(
+  git rev-parse origin/master
+)" == "$SOURCE_HEAD" ]] ||
+  die "origin/master changed during documentation generation"
+
+git worktree add \
+  --detach \
+  "$PAGES_WT" \
+  origin/gh-pages
+
+PAGES_WT_REGISTERED="YES"
+
+rsync \
+  -a \
+  --delete \
+  "$SOURCE_WT/document_ja/" \
+  "$PAGES_WT/document_ja/"
+
+rsync \
+  -a \
+  --delete \
+  "$SOURCE_WT/document_en/" \
+  "$PAGES_WT/document_en/"
+
+touch \
+  "$PAGES_WT/.nojekyll"
+
+git -C "$PAGES_WT" \
+  add \
+  document_ja \
+  document_en \
+  .nojekyll
+
+if git -C "$PAGES_WT" \
+  diff \
+  --cached \
+  --quiet
+then
+  echo "DOCUMENTATION_PUBLICATION_STATUS=NO_CHANGES"
+  echo "DOCUMENTATION_PUBLICATION_PUSH_PERFORMED=NO"
+
+else
+  git -C "$PAGES_WT" \
+    -c user.name="$USER_NAME" \
+    -c user.email="$USER_EMAIL" \
+    commit \
+    --no-gpg-sign \
+    -m "Publish generated documentation"
+
+  PAGES_COMMIT="$(
+    git -C "$PAGES_WT" \
+      rev-parse HEAD
+  )"
+
+  PAGES_TREE="$(
+    git -C "$PAGES_WT" \
+      rev-parse HEAD^{tree}
+  )"
+
+  git -C "$PAGES_WT" \
+    push \
+    --porcelain \
+    origin \
+    HEAD:refs/heads/gh-pages
+
+  REMOTE_PAGES_COMMIT="$(
+    git ls-remote \
+      origin \
+      refs/heads/gh-pages |
+    awk \
+      '$2=="refs/heads/gh-pages"{print $1}'
+  )"
+
+  [[ "$REMOTE_PAGES_COMMIT" == "$PAGES_COMMIT" ]] ||
+    die "remote gh-pages verification failed"
+
+  echo "DOCUMENTATION_PUBLICATION_STATUS=PUBLISHED"
+  echo "DOCUMENTATION_PUBLICATION_PUSH_PERFORMED=YES"
+  echo "DOCUMENTATION_PUBLICATION_COMMIT=$PAGES_COMMIT"
+  echo "DOCUMENTATION_PUBLICATION_TREE=$PAGES_TREE"
+fi
+
+[[ "$(git rev-parse HEAD)" == "$SOURCE_HEAD" ]] ||
+  die "source HEAD changed during documentation publication"
+
+[[ -z "$(
+  git status \
+    --porcelain=v1 \
+    --untracked-files=all
+)" ]] ||
+  die "source worktree changed during documentation publication"
+
+echo "SOURCE_MASTER_MUTATION=NO"
+echo "SOURCE_FILE_MUTATION=NO"
+echo "PUBLISH_DOCS_STATUS=OK"
