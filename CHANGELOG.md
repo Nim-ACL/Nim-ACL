@@ -4,6 +4,48 @@ All notable changes to Nim-ACL will be documented in this file.
 
 The format follows Keep a Changelog, and versions use Semantic Versioning.
 
+## [0.5.0] - Unreleased
+
+This release extends the public numeric and two-dimensional API surface added since v0.4.0 and aligns release documentation with the tested package surface.
+
+### Public API delta
+
+New public modules:
+
+- `src/atcoder/extra/numeric/float256.nim`
+- `src/atcoder/extra/structure/compressed_dual_segtree_2d.nim`
+- `src/atcoder/extra/structure/compressed_range_fenwicktree_2d.nim`
+- `src/atcoder/extra/structure/offline_rectangle_add_point_get.nim`
+- `src/atcoder/extra/structure/offline_rectangle_add_rectangle_sum.nim`
+- `src/atcoder/extra/structure/sparse_dual_fenwicktree_2d.nim`
+- `src/atcoder/extra/structure/sparse_dual_segtree_2d.nim`
+- `src/atcoder/extra/structure/sparse_fenwicktree_2d.nim`
+- `src/atcoder/extra/structure/sparse_range_fenwicktree_2d.nim`
+- `src/atcoder/extra/structure/sparse_segtree_2d.nim`
+- `src/atcoder/extra/structure/static_wavelet_matrix_2d.nim`
+
+Updated public modules:
+
+- `src/atcoder/extra/numeric/float128.nim`
+- `src/atcoder/extra/numeric/int128.nim`
+
+### Documentation
+
+- Added exact Markdown API pages for the 12 public modules that had no exact documentation path after v0.4.0.
+- Public API tables are derived from current exported source declarations; existing exact documentation is preserved.
+
+### Verification
+
+- Executable local release baseline: 60 contracts × 4 lanes, 240/240 passed.
+- Strict-offline local Nimble install completed under OS-level network denial.
+- Installed package source surface: 315/315 tracked `src/atcoder` Nim modules present and byte-identical.
+- Changed public-module installed import smoke: 26/26 passed across Nim 2.2.10 and Nim 2.2.4.
+- CI workflow local-reference and Nim-version matrix audits passed.
+
+### Fixed
+
+- Fixed CI quick verification cleanup so untracked generated documentation does not leave the working tree dirty.
+
 ## [0.4.0] - 2026-07-28
 
 This release extends Float128 IEEE-style operations, completes the min-plus convolution API family, publishes a curated graph facade, and improves graph compatibility while retaining explicitly deferred scopes.
