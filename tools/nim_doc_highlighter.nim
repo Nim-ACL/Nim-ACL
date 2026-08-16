@@ -108,16 +108,110 @@ when not declared NIM_ACL_DOC_HIGHLIGHTER_HPP:
       resultHtml.add escapeHtml(tail)
       resultHtml.add "</span>"
 
-  proc highlightNim(code: string): string =
+  type
+    BrokenCharLiteral = tuple[
+      found: bool,
+      first: int,
+      last: int,
+    ]
+
+  proc appendTokenizedNim(
+    resultHtml: var string,
+    code: string
+  ) =
     for item in tokenize(code, langNim):
       let
         token = item[0]
         kind = item[1]
 
-      result.appendHighlightedToken(
+      resultHtml.appendHighlightedToken(
         token,
         tokenCssClass(kind),
       )
+
+  proc firstBrokenCharLiteral(
+    code: string
+  ): BrokenCharLiteral =
+    ## Nim 2.2.4's docutils tokenizer may report the opening quote of
+    ## a character literal as punctuation and absorb later separators
+    ## into a string token. Detect only that broken opening-quote shape.
+    var offset = 0
+
+    for item in tokenize(code, langNim):
+      let
+        token = item[0]
+        kind = item[1]
+
+      if kind == gtPunctuation and token == "'" and offset < code.len and ord(code[offset]) == 39:
+        var
+          j = offset + 1
+          escaped = false
+
+        while j < code.len:
+          let value = ord(code[j])
+
+          if value == 10 or value == 13:
+            break
+
+          if not escaped and value == 39:
+            let bodyLen = j - offset - 1
+
+            if bodyLen == 1 or (bodyLen >= 2 and ord(code[offset + 1]) == 92):
+              return (
+                found: true,
+                first: offset,
+                last: j,
+              )
+
+            break
+
+          if not escaped and value == 92:
+            escaped = true
+          else:
+            escaped = false
+
+          inc j
+
+      offset += token.len
+
+    return (
+      found: false,
+      first: 0,
+      last: 0,
+    )
+
+  proc appendStableNim(
+    resultHtml: var string,
+    code: string
+  ) =
+    if code.len == 0:
+      return
+
+    let repair = firstBrokenCharLiteral(code)
+
+    if not repair.found:
+      resultHtml.appendTokenizedNim(code)
+      return
+
+    if repair.first > 0:
+      resultHtml.appendTokenizedNim(
+        code[0 ..< repair.first]
+      )
+
+    resultHtml.appendHighlightedToken(
+      code[repair.first .. repair.last],
+      "tok-string",
+    )
+
+    let next = repair.last + 1
+
+    if next < code.len:
+      resultHtml.appendStableNim(
+        code[next ..< code.len]
+      )
+
+  proc highlightNim(code: string): string =
+    result.appendStableNim(code)
 
   proc processLine(encoded: string): string =
     if encoded.len == 0:
