@@ -28,9 +28,13 @@ when not declared ATCODER_MATH_HPP:
   proc crt*(r, m:openArray[int]):(int,int) =
     assert r.len == m.len
     let n = r.len
+    if n == 0: return (0, 1)
+    assert 1 <= m[0]
     # Contracts: 0 <= r0 < m0
-    var (r0, m0) = (0, 1)
-    for i in 0..<n:
+    var
+      r0 = floorMod(r[0], m[0])
+      m0 = m[0]
+    for i in 1..<n:
       assert 1 <= m[i]
       var
         r1 = floorMod(r[i], m[i])
