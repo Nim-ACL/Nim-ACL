@@ -85,14 +85,16 @@ when not declared ATCODER_SEGTREE_HPP:
     var sm = ST.calc_e()
     while true:
       while l mod 2 == 0: l = l shr 1
-      if not f(ST.calc_op(sm, self.d[l])):
+      let nextSmOuter = ST.calc_op(sm, self.d[l])
+      if not f(nextSmOuter):
         while l < self.size:
           l = (2 * l)
-          if f(ST.calc_op(sm, self.d[l])):
-            sm = ST.calc_op(sm, self.d[l])
+          let nextSmInner = ST.calc_op(sm, self.d[l])
+          if f(nextSmInner):
+            sm = nextSmInner
             l.inc
         return l - self.size
-      sm = ST.calc_op(sm, self.d[l])
+      sm = nextSmOuter
       l.inc
       if not ((l and -l) != l): break
     return self.len
@@ -108,14 +110,16 @@ when not declared ATCODER_SEGTREE_HPP:
     while true:
       r.dec
       while r > 1 and (r mod 2 != 0): r = r shr 1
-      if not f(ST.calc_op(self.d[r], sm)):
+      let nextSmOuter = ST.calc_op(self.d[r], sm)
+      if not f(nextSmOuter):
         while r < self.size:
           r = (2 * r + 1)
-          if f(ST.calc_op(self.d[r], sm)):
-            sm = ST.calc_op(self.d[r], sm)
+          let nextSmInner = ST.calc_op(self.d[r], sm)
+          if f(nextSmInner):
+            sm = nextSmInner
             r.dec
         return r + 1 - self.size
-      sm = ST.calc_op(self.d[r], sm)
+      sm = nextSmOuter
       if not ((r and -r) != r): break
     return 0
   #{.pop.}
