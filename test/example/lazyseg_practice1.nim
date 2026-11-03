@@ -21,7 +21,7 @@ for i in 0..<n:
   let x = nextInt()
   a[i] = (mint.init(x), 1)
 
-var seg = initLazySegTree(a, op, e, mapping, composition, id)
+var seg = initLazySegTree[S, F](a, op, e, mapping, composition, id)
 
 for i in 0..<q:
   let t = nextInt()

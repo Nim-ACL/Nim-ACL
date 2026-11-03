@@ -4,6 +4,18 @@ All notable changes to Nim-ACL will be documented in this file.
 
 The format follows Keep a Changelog, and versions use Semantic Versioning.
 
+## v0.5.1 - 2026-11-03
+
+### Fixes and maintenance
+- Fix the two LazySegTree practice examples by specifying constructor type arguments `[S, F]`.
+- Correct the corresponding constructor forms in the Japanese documentation.
+- Include the previously adopted CRT first-congruence initialization change (`48fea27`).
+- Include the previously adopted SegTree search-accumulation reuse change (`d1aaf06`).
+- Include documentation-generation stabilization (`46fc8a0`) and documentation-publication scope hardening (`3c7c25c`).
+
+No experimental LazySegTree fast path or new public API is included in this release.
+Compatibility profiles checked for this release: Nim 2.2.10 and Nim 2.2.4.
+
 ## [0.5.0] - 2026-08-15
 
 This release extends the public numeric and two-dimensional API surface added since v0.4.0 and aligns release documentation with the tested package surface.

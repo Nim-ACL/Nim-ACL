@@ -244,7 +244,7 @@ for i in 0..&lt;n:
   let x = nextInt()
   a[i] = (mint.init(x), 1)
 
-var seg = initLazySegTree(a, op, e, mapping, composition, id)
+var seg = initLazySegTree[S, F](a, op, e, mapping, composition, id)
 
 for i in 0..&lt;q:
   let t = nextInt()
@@ -284,7 +284,7 @@ block:
     else:
       a[i] = (0, 1, 0)
 
-  var seg = init_lazy_segtree(a, op, e, mapping, composition, id)
+  var seg = init_lazy_segtree[S, F](a, op, e, mapping, composition, id)
   for i in 0..&lt;q:
     var t, l, r = nextInt()
     l.dec

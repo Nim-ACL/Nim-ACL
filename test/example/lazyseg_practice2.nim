@@ -26,7 +26,7 @@ block:
     else:
       a[i] = (0, 1, 0)
 
-  var seg = init_lazy_segtree(a, op, e, mapping, composition, id)
+  var seg = init_lazy_segtree[S, F](a, op, e, mapping, composition, id)
   for i in 0..<q:
     var t, l, r = nextInt()
     l.dec
