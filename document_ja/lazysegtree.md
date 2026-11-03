@@ -18,11 +18,11 @@
 ## コンストラクタ
 
 ```nim
-(1) var seg = initLazySegTree(n:int, op, e, mapping, composition, id)
-    var seg = LazySegTreeType(S, F, op, e, mapping, composition, id).init(n)
+(1) var seg = initLazySegTree[S, F](n:int, op, e, mapping, composition, id)
+    var seg = LazySegTreeType[S, F](op, e, mapping, composition, id).init(n)
     var seg = LazySegTree.getType(S, F, op, e, mapping, composition, id).init(n)
-(2) var seg = initLazySegTree(v:seq[S], op, e, mapping, composition, id)
-    var seg = LazySegTreeType(S, F, op, e, mapping, composition, id).init(v)
+(2) var seg = initLazySegTree[S, F](v:seq[S], op, e, mapping, composition, id)
+    var seg = LazySegTreeType[S, F](op, e, mapping, composition, id).init(v)
     var seg = LazySegTree.getType(S, F, op, e, mapping, composition, id).init(v)
 ```
 
