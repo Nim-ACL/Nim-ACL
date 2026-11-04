@@ -31,7 +31,7 @@ when not declared ATCODER_EXTRA_MATH_ERATOSTHENES_HPP:
     result.expand(n)
   proc isPrime*(self:var Eratosthenes, n:int): bool =
     self.expand(n + 1)
-    return n != 1 and self.pdiv[n] == n
+    return n != 0 and n != 1 and self.pdiv[n] == n
   proc primeDivisor*(self:var Eratosthenes, n:int):int =
     self.expand(n + 1)
     return self.pdiv[n]

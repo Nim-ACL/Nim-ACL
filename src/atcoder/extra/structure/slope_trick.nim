@@ -106,13 +106,13 @@ when not declared ATCODER_SLOPE_TRICK_HPP:
  
   proc merge*[T](self, st: var SlopeTrick[T]) =
     if st.len > self.len:
-      swap self.st.L, self.L
-      swap self.st.R, self.R
-      swap self.st.add_left, self.add_left
-      swap self.st.add_right, self.add_right
-      swap self.st.min_f, self.min_f
-    while not st.R.len == 0:
-      add_x_minus_a(st.pop_R())
-    while not st.L.len == 0:
-      add_a_minus_x(st.pop_L())
+      swap st.L, self.L
+      swap st.R, self.R
+      swap st.add_left, self.add_left
+      swap st.add_right, self.add_right
+      swap st.min_f, self.min_f
+    while st.R.len > 0:
+      self.add_x_minus_a(st.pop_R())
+    while st.L.len > 0:
+      self.add_a_minus_x(st.pop_L())
     self.min_f += st.min_f

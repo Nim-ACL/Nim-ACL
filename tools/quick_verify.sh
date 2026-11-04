@@ -1,9 +1,43 @@
 #!/usr/bin/env bash
-set -u
+set -eu
 
 LOG="${NACL_QUICK_VERIFY_LOG:-/tmp/nacl_quick_verify.log}"
 STATUS=OK
 STEP=init
+
+# Keep the result visible even when a failure exits the redirected group.
+exec 3>&1
+nacl_finish() {
+  local rc=$?
+  trap - EXIT
+  set +e
+  if [ "$rc" -ne 0 ]; then
+    STATUS=NG
+  elif [ "$STATUS" != OK ]; then
+    rc=1
+  fi
+
+  {
+    echo
+    echo "===== NACL RESULT START ====="
+    echo "STATUS: $STATUS"
+    echo "STEP: $STEP"
+    echo "LOG: $LOG"
+    if [ "$STATUS" = OK ]; then
+      echo "SUMMARY: quick verify passed"
+    else
+      echo "SUMMARY: quick verify failed"
+      echo "LAST_LOG_LINES:"
+      tail -n 120 "$LOG"
+    fi
+    echo "===== NACL RESULT END ====="
+  } >&3
+  exit "$rc"
+}
+trap nacl_finish EXIT
+
+# Truncate once; append mode also preserves commands that append to LOG.
+: >"$LOG"
 
 {
   set -e
@@ -29,6 +63,13 @@ STEP=init
     tests/test_extra_monotone_minima.nim
     tests/test_extra_dp_2d_edit_rectangle.nim
     tests/test_extra_math_basic.nim
+    tests/test_extra_combination_table.nim
+    tests/test_extra_eratosthenes.nim
+    tests/test_extra_static_eratosthenes.nim
+    tests/test_extra_convert_base.nim
+    tests/test_extra_rolling_hash_append.nim
+    tests/test_extra_slope_trick_merge.nim
+    tests/test_extra_bellman_ford_path.nim
     tests/test_extra_xor_basis.nim
     tests/test_extra_xor_basis_random.nim
     tests/test_extra_arbitrary_mod_combination.nim
@@ -1172,37 +1213,15 @@ rm -rf "$dense_fenwicktree_2d_tmp"
 STEP="cleanup compiler runtime after final Nim tests"
 rm -rf .nim_runtime nimcache
 
-STEP="final clean"
-  if [ -n "$(git status --porcelain)" ]; then
-    git status --short
-    false
-  fi
-
-} >"$LOG" 2>&1 || STATUS=NG
-
-echo
-echo "===== NACL RESULT START ====="
-echo "STATUS: $STATUS"
-echo "STEP: $STEP"
-echo "LOG: $LOG"
-
-if [ "$STATUS" = OK ]; then
-  echo "SUMMARY: quick verify passed"
-else
-  echo "SUMMARY: quick verify failed"
-  echo "LAST_LOG_LINES:"
-  tail -n 120 "$LOG"
-fi
-
-echo "===== NACL RESULT END ====="
-
-[ "$STATUS" = OK ]
 
 # NIM_ACL_GENERATED_DOCUMENT_AUDIT_V1
+STEP="generated document link postprocess"
 python3 tools/postprocess_document_links.py
+STEP="generated document HTML audit"
 python3 tools/audit_generated_document_html.py
 
 # NIM_ACL_STRICT_HIGHLIGHT_COUNT_AUDIT_V1
+STEP="strict documentation highlight counts"
 NIM_ACL_DOC_AUDIT_OUTPUT="$(
   python3 tools/audit_generated_document_html.py
 )"
@@ -1249,20 +1268,35 @@ if [ "$NIM_ACL_MARKERS" -gt 0 ]; then
 fi
 
 # NIM_ACL_SPECIFIC_LECTURE_LINK_AUDIT_V1
+STEP="specific lecture link audit"
 python3 tools/audit_atcoder_lecture_links.py
 # NIM_ACL_PROBLEM_EXAMPLES_AUDIT_V1
+STEP="problem examples audit"
 python3 tools/audit_problem_examples.py
 # NIM_ACL_DP_OPTIMIZATION_AUDIT_V1
+STEP="DP optimization audit"
 python3 tools/audit_dp_optimization.py
 # NIM_ACL_CURATED_DOCS_AUDIT_V1
+STEP="curated documentation audit"
 python3 tools/audit_curated_docs.py
 # NIM_ACL_PERSISTENT_SEGTREE_API_AUDIT_V1
+STEP="persistent segtree API audit"
 python3 tools/audit_persistent_segment_tree_api.py
 # NIM_ACL_TUNING_PARAMETER_DOC_AUDIT_V1
+STEP="tuning parameter documentation audit"
 python3 tools/audit_tuning_parameters.py
 # NIM_ACL_JAPANESE_FACADE_AUDIT_V1
+STEP="Japanese facade audit"
 python3 tools/audit_japanese_facades.py
 
 # NIM_ACL_NIM_VERSION_MATRIX_AUDIT_V1
+STEP="Nim version matrix audit"
 python3 tools/audit_nim_version_matrix.py
 
+STEP="final clean"
+  if [ -n "$(git status --porcelain)" ]; then
+    git status --short
+    false
+  fi
+
+} >>"$LOG" 2>&1

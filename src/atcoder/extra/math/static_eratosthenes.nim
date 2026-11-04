@@ -16,7 +16,7 @@ when not declared ATCODER_STATIC_ERATOSTHENES_HPP:
   proc initEratosthenes*(n:static[int]):Eratosthenes[n] =
     result.init()
   proc isPrime*(self:Eratosthenes, n:int): bool =
-    return n != 1 and self.pdiv[n] == n
+    return n != 0 and n != 1 and self.pdiv[n] == n
   proc primeDivisor*(self:Eratosthenes, n:int):int =
     return self.pdiv[n]
   proc factor*(self:var Eratosthenes, n:int): seq[(int,int)] =

@@ -99,9 +99,9 @@ when not declared ATCODER_EXTRA_STRING_ROLLING_HASH_HPP:
   # &演算子はRH_Baseではないところに
   proc `&=`*(a:var PartialRollingHash, c:SomeInteger or char) =
     const base = PartialRollingHash.base
-    a = multRaw(a, base)
-    a += RHBase(c)
-    a = a.calcMod()
+    a.h = multRaw(a.h, RH_Base(base))
+    a.h += RHBase(uint(c))
+    a.h = a.h.calcMod()
     a.len.inc
   proc `&`*(a:PartialRollingHash, c:SomeInteger or char):PartialRollingHash = result = a;result &= c
   proc `&`*(c:SomeInteger or char, a:PartialRollingHash):PartialRollingHash =

@@ -68,7 +68,5 @@ when not declared ATCODER_EXTRA_MATH_COMBINATION_TABLE_HPP:
 
   template P*(T:CombinationC, n,r:int):auto =
     if r < 0 or n < r: T.zero()
-    elif n - r >= r:
-      T.C(n, r) * T.fact(r)
     else:
-      T.C(n, r) * T.fact(n - r)
+      T.C(n, r) * T.fact(r)

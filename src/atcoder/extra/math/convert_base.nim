@@ -2,10 +2,8 @@ when not declared ATCODER_CONVERT_BASE_HPP:
   const ATCODER_CONVERT_BASE_HPP* = 1
   proc toInt*(d: seq[int], b = 10):int =
     result = 0
-    var p = 1
-    for di in d:
-      result += p * di
-      p *= b
+    for i in countdown(d.len - 1, 0):
+      result = result * b + d[i]
   proc toSeq*(n: int, b = 10, min_digit = -1):seq[int] =
     result = newSeq[int]()
     if n == 0:

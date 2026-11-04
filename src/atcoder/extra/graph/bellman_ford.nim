@@ -15,10 +15,13 @@ when not declared ATCODER_BELLMAN_FORD_HPP:
     d.dist[u]
   proc path*[T, U](d:BellmanFordResult[T, U], t:U): seq[U] = 
     var u = t
-    while u >= 0:
+    while true:
+      when U is int:
+        if u < 0: break
+      let i = when U isnot int: d.id(u) else: u
       result.add(u)
-      if u == d.prev[u]: break
-      u = d.prev[u]
+      if u == d.prev[i]: break
+      u = d.prev[i]
     result.reverse()
 
   proc bellman_ford*[G:Graph](g:G, s:G.U or seq[G.U]): auto =
