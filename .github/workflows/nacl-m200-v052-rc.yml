@@ -1,0 +1,65 @@
+name: M200R2 Nim-ACL v0.5.2 final RC gates
+
+on:
+  push:
+    branches:
+      - 'nacl/m200r2-v052-rc-00a3acc9'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m200r2-v052-rc-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  focused:
+    name: ${{ matrix.os }} / Nim ${{ matrix.nim }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            nim: '2.2.4'
+          - os: ubuntu-24.04
+            nim: '2.2.10'
+          - os: windows-2025
+            nim: '2.2.4'
+
+    steps:
+      - name: Checkout isolated candidate branch
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+
+      - name: Set up Nim
+        uses: jiro4989/setup-nim-action@v2
+        with:
+          nim-version: ${{ matrix.nim }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install Jinja2 for exact input template rendering
+        run: python -m pip install jinja2==3.1.6
+
+      - name: Run v0.5.2 integrated release candidate gates
+        env:
+          M195_NIM_VERSION: ${{ matrix.nim }}
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python tools/m200_v052_release_candidate_gate.py --report m200-ci-report
+
+      - name: Save logs even if a check fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m200r2-${{ matrix.os }}-nim-${{ matrix.nim }}
+          path: m200-ci-report/
+          if-no-files-found: warn
+          retention-days: 14
