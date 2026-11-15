@@ -4,7 +4,7 @@ All notable changes to Nim-ACL will be documented in this file.
 
 The format follows Keep a Changelog, and versions use Semantic Versioning.
 
-## [0.5.2] - Unreleased
+## [0.5.2] - 2026-11-15
 
 ### Fixed
 - Correct the permutation-count table `P(n, r)` when `r` is near `n` (including `P(2, 2)`).
@@ -22,8 +22,8 @@ The format follows Keep a Changelog, and versions use Semantic Versioning.
 ### Qualification status
 - Focused M192/M193 repairs, M194 local integration, and pre-template M195 Ubuntu/Windows CI passed.
 - M196 Ubuntu shared-runner performance comparison was exploratory; it does not establish an AtCoder speedup.
-- M198 template rendering and host compile fixtures passed; final integration CI on this combined candidate remains pending.
-- Release date, final version tag, public release, and live-page parity remain pending.
+- M198 template rendering and host compile fixtures passed; M200R2 final integration CI passed on Ubuntu 24.04 (Nim 2.2.4 and 2.2.10) and Windows 2025 (Nim 2.2.4), with 114/114 focused checks.
+- The release tag, GitHub Release, and live-page parity must be verified separately; CI completion alone does not establish publication.
 
 ## v0.5.1 - 2026-11-03
 
