@@ -4,6 +4,27 @@ All notable changes to Nim-ACL will be documented in this file.
 
 The format follows Keep a Changelog, and versions use Semantic Versioning.
 
+## [0.5.2] - Unreleased
+
+### Fixed
+- Correct the permutation-count table `P(n, r)` when `r` is near `n` (including `P(2, 2)`).
+- Correct the primality result for zero in dynamic and static Eratosthenes implementations.
+- Avoid overflow from unnecessary place-value multiplication in base conversion.
+- Repair character append for `PartialRollingHash`, `SlopeTrick.merge`, and tuple-vertex Bellman–Ford path reconstruction.
+- Make `tools/quick_verify.sh` report failures reliably, including late audit failures.
+
+### Changed
+- Update the expander's source provenance handling and portable `plain` / `embed` / `bundle` expansion.
+- Preserve caller compiler flags and output path in bundled compilation; handle flattened module exports.
+- Update `atcoder-tools_template.nim` for single-case and multi-case Jinja2 input generation.
+- Keep `plain` as the default expander mode; `embed` and `bundle` remain available.
+
+### Qualification status
+- Focused M192/M193 repairs, M194 local integration, and pre-template M195 Ubuntu/Windows CI passed.
+- M196 Ubuntu shared-runner performance comparison was exploratory; it does not establish an AtCoder speedup.
+- M198 template rendering and host compile fixtures passed; final integration CI on this combined candidate remains pending.
+- Release date, final version tag, public release, and live-page parity remain pending.
+
 ## v0.5.1 - 2026-11-03
 
 ### Fixes and maintenance
