@@ -20,12 +20,21 @@ import atcoder/modint
 const MOD = {{ mod }}
 type mint = modint{{ mod }}
 {% endif %}
+
 {% if prediction_success %}
-solveProc solve({{formal_arguments}}):
+solveProc solve({{ formal_arguments }}):
   discard
 
 when not defined(DO_TEST):
-  {{input_part_with_solve_function}}
+{% if multi_case %}
+  {{ prefix_input_part }}
+  for {{ case_loop_var }} in 0..<{{ case_count_var }}:
+    {{ case_input_part | replace('\n', '\n' ~ "    ") }}
+    solve({{ actual_arguments }})
+{% else %}
+  {{ input_part }}
+  solve({{ actual_arguments }})
+{% endif %}
 else:
   discard
 {% else %}
@@ -33,7 +42,7 @@ else:
 solveProc solve():
   discard
 
-when not DO_TEST:
+when not defined(DO_TEST):
   solve()
 else:
   discard
