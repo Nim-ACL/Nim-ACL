@@ -1,0 +1,50 @@
+name: M196 Nim-ACL Ubuntu performance exploration
+
+on:
+  push:
+    branches:
+      - 'nacl/m196-ubuntu-perf-aee1b2bf'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m196-ubuntu-perf-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  performance:
+    name: ubuntu-24.04 / Nim 2.2.4 / exploratory performance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout exact source with parent
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+
+      - name: Install Nim 2.2.4
+        uses: jiro4989/setup-nim-action@v2
+        with:
+          nim-version: '2.2.4'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Benchmark plain embed bundle (reference numbers only)
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python tools/m196_ubuntu_perf.py
+
+      - name: Save benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m196-ubuntu-nim224-results
+          path: m196-ubuntu-perf-report/
+          if-no-files-found: warn
+          retention-days: 21
