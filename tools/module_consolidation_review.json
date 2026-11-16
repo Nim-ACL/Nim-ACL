@@ -1,0 +1,178 @@
+{
+  "scope_note": "All tracked modules receive a lexical inventory; the groups below are manual API triage, not a claim of exhaustive semantic equivalence. No file is removed merely because it has no in-repository import.",
+  "integration_limitations": [
+    {
+      "component": "expander embed mode",
+      "reproduction": "tests/test_extra_monoid.nim has imports nested in a when block; the embed ImportExpand call is emitted at column zero and the following indented proc fails parsing on both required Nim versions.",
+      "baseline": "expander.py, test_extra_monoid.nim and the restored monoid.nim are byte-identical to HEAD. Direct, plain and bundle modes pass; non-conditional public-contract fixtures pass all four modes.",
+      "action": "Separate expander regression/fix before extending embed coverage to conditional-import inputs; do not change the monoid API to work around it."
+    }
+  ],
+  "groups": [
+    {
+      "modules": ["src/atcoder/extra/algorithm/mo.nim", "src/atcoder/extra/structure/mo.nim", "src/atcoder/extra/algorithm/internal/mo_core.nim"],
+      "decision": "already_shared",
+      "reason": "Keep both public APIs; their ordering engine is already shared."
+    },
+    {
+      "modules": ["src/atcoder/extra/string/kmp.nim", "src/atcoder/extra/string/knuth_morris_pratt.nim"],
+      "decision": "already_shared",
+      "reason": "The legacy wrapper delegates to the canonical matcher. Preserve empty-pattern semantics and both import orders."
+    },
+    {
+      "modules": ["src/atcoder/extra/graph/lowlink.nim", "src/atcoder/extra/graph/undirected_decomposition.nim", "src/atcoder/extra/graph/biconnected_components.nim", "src/atcoder/extra/graph/two_edge_connected_components.nim", "src/atcoder/extra/graph/block_cut_tree.nim"],
+      "decision": "already_shared",
+      "reason": "The P1 iterative low-link traversal is shared. Keep adapters and result ordering."
+    },
+    {
+      "modules": ["src/atcoder/extra/algorithm/run_length_encoding.nim", "src/atcoder/extra/string/run_length_compress.nim"],
+      "decision": "encoding_shared_in_this_change",
+      "reason": "Legacy encode keeps c/n tuple fields and delegates to runLengthEncode. Canonical string encoding delegates to its generic core. Keep legacy decoders: string elements concatenate within a run, and negative counts raise RangeDefect rather than AssertionDefect.",
+      "tests": ["tests/test_run_length_compatibility.nim", "tests/test_extra_run_length_encoding.nim"]
+    },
+    {
+      "modules": ["src/atcoder/extra/other/compress.nim", "src/atcoder/extra/algorithm/coordinate_compression.nim"],
+      "decision": "next_adapter_candidate",
+      "reason": "Share sorting/deduplication and lookups, but preserve the legacy sequence representation, variadic constructor, mutating build and missing-key assertion.",
+      "required_tests": "Legacy direct import, both import orders, empty input, multiple pools, custom ordered values, missing keys and sequence operations."
+    },
+    {
+      "modules": ["src/atcoder/extra/math/multipoint_evaluation.nim", "src/atcoder/extra/math/multipoint_evaluation_backup.nim", "src/atcoder/extra/math/multipoint_evaluation_slow.nim", "src/atcoder/extra/math/subproduct_tree.nim"],
+      "decision": "candidate_after_numeric_contract_tests",
+      "reason": "The backup exposes a matching entry point but uses specialized FFT logic. The slow version additionally exports ProductTree helpers; it cannot simply be deleted.",
+      "required_tests": "Horner oracle; empty polynomial and points; repeated points; non-power-of-two lengths; supported moduli and coefficient types; ProductTree helper consumers."
+    },
+    {
+      "modules": ["src/atcoder/extra/math/eratosthenes.nim", "src/atcoder/extra/math/eratosthenes_old.nim", "src/atcoder/extra/math/static_eratosthenes.nim"],
+      "decision": "keep_pending_adapter",
+      "reason": "Fixed immutable, dynamically expanding var, and compile-time/static contracts differ. Re-exporting the dynamic API would break let-bound legacy consumers."
+    },
+    {
+      "modules": ["src/atcoder/extra/string/suffix_automaton.nim", "src/atcoder/extra/string/suffix_automaton_old.nim"],
+      "decision": "keep_pending_low_level_API_mapping",
+      "reason": "Legacy SA_Node references, generic automaton type, int32 indices and mutable exposed nodes differ from canonical value states and occurrence lifecycle."
+    },
+    {
+      "modules": ["src/atcoder/extra/string/rolling_hash.nim", "src/atcoder/extra/string/rolling_hash_old.nim"],
+      "decision": "share_arithmetic_only_after_tests",
+      "reason": "The current range hash is a length-aware PartialRollingHash; the old one returns RH and exposes different connect/base operations. Do not alias result types."
+    },
+    {
+      "modules": ["src/atcoder/extra/graph/graph_template.nim", "src/atcoder/extra/graph/graph_template_old.nim", "src/atcoder/extra/graph/graph_template_directed_undirected.nim", "src/atcoder/extra/graph/static_graph.nim"],
+      "decision": "keep_representations",
+      "reason": "Legacy Graph is a sequence; newer containers have object, directedness, callback or CSR contracts. Shared adapters must preserve sequence operations and reverse-edge conventions."
+    },
+    {
+      "modules": ["src/atcoder/extra/tree/rerooting.nim", "src/atcoder/extra/graph/rerooting_dp.nim"],
+      "decision": "candidate_after_weighted_callback_mapping",
+      "reason": "Legacy arbitrary roots and asymmetric directional edge weights must map to the newer iterative engine; callback argument semantics are not interchangeable."
+    },
+    {
+      "modules": ["src/atcoder/extra/structure/segtree_2d.nim", "src/atcoder/extra/structure/segtree_2d_backup.nim", "src/atcoder/extra/structure/compressed_segtree_2d.nim"],
+      "decision": "keep_backup_until_public_methods_mapped",
+      "reason": "The main legacy facade already uses the canonical compressed tree. The backup also exports recursive/internal-parameter methods and a different object type."
+    },
+    {
+      "modules": ["src/atcoder/extra/structure/universal_segtree.nim", "src/atcoder/extra/structure/universal_segtree_backup.nim", "src/atcoder/segtree.nim", "src/atcoder/lazysegtree.nim"],
+      "decision": "keep_feature_variants",
+      "reason": "Value-only, action-only, lazy and position-dependent actions, plus stored versus static callbacks, require a full API matrix before replacement."
+    },
+    {
+      "modules": ["src/atcoder/extra/structure/set_map.nim", "src/atcoder/extra/structure/sorted_set_map.nim", "src/atcoder/extra/structure/set_map_by_randomized_binary_search_tree.nim", "src/atcoder/extra/structure/tree_backends.nim"],
+      "decision": "keep_backend_variants",
+      "reason": "set_map is already a facade. Red-black, splay and randomized backends have different node, iterator and balancing contracts."
+    },
+    {
+      "modules": ["src/atcoder/extra/structure/sparse_segtree_2d.nim", "src/atcoder/extra/structure/sparse_dual_segtree_2d.nim", "src/atcoder/extra/structure/internal/sparse_segment_tree_core.nim"],
+      "decision": "already_shared_core",
+      "reason": "Allocation/traversal helpers are already shared; aggregate and dual-update operations remain different."
+    },
+    {
+      "modules": ["src/atcoder/extra/math/int128.nim", "src/atcoder/extra/numeric/int128.nim", "src/atcoder/extra/numeric/int256.nim", "src/atcoder/extra/numeric/float128.nim", "src/atcoder/extra/numeric/float256.nim"],
+      "decision": "keep_width_and_numeric_domains",
+      "reason": "math/int128 is already a compatibility facade. Integer and floating-point widths have distinct range, rounding and ABI contracts; internal limb operations are shared."
+    },
+    {
+      "modules": ["src/atcoder/extra/dp/divide_and_conquer_optimization.nim", "src/atcoder/extra/dp/monotone_minima.nim", "src/atcoder/extra/dp/smawk.nim"],
+      "decision": "already_shared_alias_keep_distinct_algorithm",
+      "reason": "Divide-and-conquer already re-exports monotoneMinima. SMAWK assumes total monotonicity and is not an unconditional replacement."
+    },
+    {
+      "modules": ["src/atcoder/extra/graph/minimum_arborescence.nim", "src/atcoder/extra/graph/chu_liu_edmonds.nim"],
+      "decision": "already_shared",
+      "reason": "The functional-name alias already delegates to Chu-Liu/Edmonds."
+    },
+    {
+      "modules": ["src/atcoder/extra/math/exp_old.nim", "src/atcoder/extra/math/formal_power_series.nim", "src/atcoder/extra/math/simplex_old.nim", "src/atcoder/extra/math/simplex.nim", "src/atcoder/modint_backup.nim", "src/atcoder/modint.nim"],
+      "decision": "separate_legacy_audit_required",
+      "reason": "Legacy fragments and overlapping implementations are candidates, not proven removable files. Confirm exported routines, include-style use, status enums and numeric contracts before adapting each family."
+    },
+    {
+      "modules": ["src/atcoder/extra/other/tuple_index.nim", "src/atcoder/extra/other/tuple_indexing.nim"],
+      "decision": "macro_contract_audit_required",
+      "reason": "Export visibility, supported shapes, string/ptr handling and overload fallback differ. Macro text similarity does not establish compatibility."
+    },
+    {
+      "modules": ["src/atcoder/extra/structure/dense_range_fenwicktree_2d.nim", "src/atcoder/extra/structure/sparse_range_fenwicktree_2d.nim"],
+      "decision": "next_shared_internal_kernel_candidate",
+      "reason": "The four-tree rectangle-add/prefix-sum equations are duplicated; dense versus sparse storage must remain separate. Extract the arithmetic/update kernel without merging public types or include guards.",
+      "required_tests": "Existing coexistence test and both range Fenwick contracts, both import orders, empty boundaries, random grid oracle and custom additive/scalar types."
+    },
+    {
+      "modules": ["src/atcoder/convolution.nim", "src/atcoder/extra/math/convolution_universal.nim"],
+      "decision": "butterfly_kernel_candidate_keep_root_policies",
+      "reason": "Many butterfly loops are copied, but root initialization differs: ACL mod/primitive_root versus the universal get_pow2_root extension point. Share loop kernels only after coefficient and root-policy coverage."
+    },
+    {
+      "modules": ["src/atcoder/mincostflow.nim", "src/atcoder/extra/graph/mincostflow_generalized.nim"],
+      "decision": "flow_kernel_candidate_keep_cost_domains",
+      "reason": "Residual storage and shortest augmenting path code overlap. The generalized graph has graphType policies and negative-cost initialization; the ACL API asserts nonnegative added costs. Preserve those policies and reset/set_edge APIs."
+    },
+    {
+      "modules": ["src/atcoder/extra/structure/offline_rectangle_add_point_get.nim", "src/atcoder/extra/structure/offline_rectangle_add_rectangle_sum.nim"],
+      "decision": "event_validation_helpers_only",
+      "reason": "Event lifecycle and rectangle validation overlap, but point queries and rectangle coefficient integration require different kernels and output semantics."
+    },
+    {
+      "modules": ["src/atcoder/extra/other/decimal.nim", "src/atcoder/extra/other/decimal_gmp.nim", "src/atcoder/extra/other/decimal_mpfr.nim"],
+      "decision": "keep_external_numeric_backends",
+      "reason": "Shared-looking arithmetic fragments do not imply equivalent precision, rounding, ownership or GMP/MPFR FFI contracts. External dependencies also require a dedicated validation environment."
+    },
+    {
+      "modules": ["src/atcoder/extra/structure/old_randomized_binary_search_tree.nim", "src/atcoder/extra/structure/randomized_binary_search_tree_with_parent.nim", "src/atcoder/extra/structure/implicit_treap.nim"],
+      "decision": "keep_node_and_lazy_contracts",
+      "reason": "Exported mutable nodes, parent pointers, lazy callbacks and position-dependent actions differ. An old filename and absence of local imports do not authorize breaking external consumers."
+    },
+    {
+      "modules": ["src/atcoder/extra/other/algorithmutils.nim", "src/atcoder/extra/other/itertools.nim"],
+      "decision": "already_shared",
+      "reason": "Legacy permutation/combination iterators delegate to itertools; unrelated nth_element and setUnion routines remain in algorithmutils."
+    }
+  ],
+  "new_algorithm_candidates": [
+    {
+      "priority": 1,
+      "algorithm": "Dominator tree",
+      "search_pattern": "dominator|immediateDominator|lengauer",
+      "existing_neighbours": ["src/atcoder/scc.nim", "src/atcoder/extra/graph/lowlink.nim"],
+      "new_capability": "Directed root-to-vertex path domination; SCC and undirected articulation do not answer it.",
+      "required_tests": "Unreachable vertices, loops, parallel arcs, vertex-deletion reachability oracle on small directed graphs, deep chains."
+    },
+    {
+      "priority": 2,
+      "algorithm": "Gomory-Hu tree",
+      "search_pattern": "gomory.?hu",
+      "existing_neighbours": ["src/atcoder/maxflow.nim"],
+      "new_capability": "All-pairs undirected minimum-cut queries through a cut-equivalent tree; reuse the existing flow engine.",
+      "required_tests": "Compare every pair with fresh maxflow calls; disconnected graphs, zero capacities, parallel edges and wide capacity values."
+    },
+    {
+      "priority": 3,
+      "algorithm": "General maximum-weight matching",
+      "search_pattern": "weighted.?blossom|weighted.?matching|maximum.?weight.?matching",
+      "existing_neighbours": ["src/atcoder/extra/graph/gabow_edmonds.nim", "src/atcoder/extra/graph/hungarian.nim"],
+      "new_capability": "Weighted non-bipartite matching; the existing general matcher is unweighted and Hungarian handles bipartite assignment.",
+      "required_tests": "Subset-DP oracle on small graphs, odd cycles, negative and zero weights, explicit cardinality tie policy. Higher implementation and verification cost; defer until existing legacy audits are complete."
+    }
+  ]
+}
