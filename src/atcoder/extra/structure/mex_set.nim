@@ -24,6 +24,8 @@ when not declared ATCODER_EXTRA_STRUCTURE_MEX_SET_HPP:
     for x in 0 .. limit + 1:
       result.missing.incl(x)
 
+  proc insert*(s: var MexSet, x: int): bool
+
   proc initMexSet*(
     limit: int,
     values: openArray[int]

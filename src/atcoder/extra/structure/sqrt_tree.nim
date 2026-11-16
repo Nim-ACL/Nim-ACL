@@ -65,12 +65,12 @@ when not declared ATCODER_EXTRA_STRUCTURE_SQRT_TREE_HPP:
 
     var blockProduct = newSeq[T](blockCount)
 
-    for block in 0 ..< blockCount:
+    for blockIndex in 0 ..< blockCount:
       let
-        blockL = l + block * result.blockSize
+        blockL = l + blockIndex * result.blockSize
         blockR = min(r, blockL + result.blockSize)
 
-      result.children[block] =
+      result.children[blockIndex] =
         buildNode(data, op, blockL, blockR)
 
       result.prefix[blockL - l] = data[blockL]
@@ -86,7 +86,7 @@ when not declared ATCODER_EXTRA_STRUCTURE_SQRT_TREE_HPP:
           result.suffix[i - l] =
             op(data[i], result.suffix[i + 1 - l])
 
-      blockProduct[block] =
+      blockProduct[blockIndex] =
         result.prefix[blockR - 1 - l]
 
     result.between = newSeq[seq[T]](blockCount)

@@ -106,7 +106,7 @@ when not declared ATCODER_EXTRA_GRAPH_UNDIRECTED_DECOMPOSITION_HPP:
       edgeStack: seq[int] = @[]
       articulationFlag = newSeq[bool](n)
 
-    proc emitComponent(stopEdge: int) =
+    proc emitComponent(stopEdge: int, state: var BiconnectedComponentsResult) =
       var component: seq[int] = @[]
 
       while edgeStack.len > 0:
@@ -120,11 +120,11 @@ when not declared ATCODER_EXTRA_GRAPH_UNDIRECTED_DECOMPOSITION_HPP:
 
       doAssert component.len > 0
 
-      let componentId = result.edgeComponents.len
+      let componentId = state.edgeComponents.len
 
       for edgeId in component:
-        doAssert result.componentOfEdge[edgeId] < 0
-        result.componentOfEdge[edgeId] = componentId
+        doAssert state.componentOfEdge[edgeId] < 0
+        state.componentOfEdge[edgeId] = componentId
 
       var vertices: seq[int] = @[]
 
@@ -132,12 +132,12 @@ when not declared ATCODER_EXTRA_GRAPH_UNDIRECTED_DECOMPOSITION_HPP:
         vertices.add g.edges[edgeId].u
         vertices.add g.edges[edgeId].v
 
-      result.edgeComponents.add component
-      result.vertexComponents.add sortedUnique(vertices)
+      state.edgeComponents.add component
+      state.vertexComponents.add sortedUnique(vertices)
 
-    proc dfs(v, parentEdge: int) =
-      result.ord[v] = timer
-      result.low[v] = timer
+    proc dfs(v, parentEdge: int, state: var BiconnectedComponentsResult) =
+      state.ord[v] = timer
+      state.low[v] = timer
       timer.inc
 
       var childCount = 0
@@ -148,33 +148,33 @@ when not declared ATCODER_EXTRA_GRAPH_UNDIRECTED_DECOMPOSITION_HPP:
 
         let to = e.to
 
-        if result.ord[to] < 0:
+        if state.ord[to] < 0:
           childCount.inc
           edgeStack.add e.id
 
-          dfs(to, e.id)
+          dfs(to, e.id, state)
 
-          result.low[v] = min(result.low[v], result.low[to])
+          state.low[v] = min(state.low[v], state.low[to])
 
-          if result.low[to] >= result.ord[v]:
+          if state.low[to] >= state.ord[v]:
             if parentEdge >= 0 or childCount > 1:
               articulationFlag[v] = true
 
-            emitComponent(e.id)
+            emitComponent(e.id, state)
 
-          if result.low[to] > result.ord[v]:
-            result.bridges.add e.id
+          if state.low[to] > state.ord[v]:
+            state.bridges.add e.id
 
-        elif result.ord[to] < result.ord[v]:
+        elif state.ord[to] < state.ord[v]:
           # Back edge to an ancestor. Edge ids make parallel edges safe.
           edgeStack.add e.id
-          result.low[v] = min(result.low[v], result.ord[to])
+          state.low[v] = min(state.low[v], state.ord[to])
 
     for start in 0 ..< n:
       if result.ord[start] >= 0:
         continue
 
-      dfs(start, -1)
+      dfs(start, -1, result)
       doAssert edgeStack.len == 0
 
     for v in 0 ..< n:
@@ -291,18 +291,18 @@ when not declared ATCODER_EXTRA_GRAPH_UNDIRECTED_DECOMPOSITION_HPP:
       result.blockNodeCount + result.articulationVertices.len
     )
 
-    for block, vertices in result.blockVertices:
+    for blockIndex, vertices in result.blockVertices:
       for v in vertices:
         if isArticulation[v]:
           let articulationNode = result.articulationNode[v]
 
-          result.tree[block].add articulationNode
-          result.tree[articulationNode].add block
+          result.tree[blockIndex].add articulationNode
+          result.tree[articulationNode].add blockIndex
         else:
           if result.vertexNode[v] < 0:
-            result.vertexNode[v] = block
+            result.vertexNode[v] = blockIndex
           else:
-            doAssert result.vertexNode[v] == block
+            doAssert result.vertexNode[v] == blockIndex
 
     for v in 0 ..< n:
       doAssert result.vertexNode[v] >= 0

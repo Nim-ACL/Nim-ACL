@@ -23,11 +23,11 @@ test "maximum rotation":
 test "generic sequence":
   let a = @[3, 1, 2, 1]
 
-  check minimumRotationIndex(a) == 3
-  check minimumRotation(a) == @[1, 3, 1, 2]
+  check minimumRotationIndex(a) == 1
+  check minimumRotation(a) == @[1, 2, 1, 3]
   check maximumRotation(a) == @[3, 1, 2, 1]
 
 test "empty sequence":
   check minimumRotationIndex("") == 0
   check minimumRotation("") == ""
-  check minimumRotation(newSeq[int]()) == @[]
+  check minimumRotation(newSeq[int]()) == newSeq[int]()

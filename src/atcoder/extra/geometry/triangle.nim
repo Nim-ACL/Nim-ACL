@@ -4,7 +4,7 @@ when not declared ATCODER_TRIANGLE_HPP:
 
   proc centroid*[Real](a,b,c:Point[Real]):Point[Real] =
     result = a + b + c
-    result /= Real(3)
+    result = result / Real(3)
   
   proc incircle*[Real](a,b,c:Point[Real]):Circle[Real] =
     let

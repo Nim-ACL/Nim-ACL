@@ -109,10 +109,10 @@ when not declared ATCODER_EXTRA_GRAPH_DSU_ON_TREE_HPP:
       let v = fr.v
 
       if fr.phase == 0:
-        stack.add DSUOnTreeRunFrame(v: v, keep: fr.keep, phase: 1)
+        system.add(stack, DSUOnTreeRunFrame(v: v, keep: fr.keep, phase: 1))
 
         if dt.heavy[v] >= 0:
-          stack.add DSUOnTreeRunFrame(v: dt.heavy[v], keep: true, phase: 0)
+          system.add(stack, DSUOnTreeRunFrame(v: dt.heavy[v], keep: true, phase: 0))
 
         var i = dt.graph[v].len
 
@@ -122,7 +122,7 @@ when not declared ATCODER_EXTRA_GRAPH_DSU_ON_TREE_HPP:
           let to = dt.graph[v][i]
 
           if dt.parent[to] == v and to != dt.heavy[v]:
-            stack.add DSUOnTreeRunFrame(v: to, keep: false, phase: 0)
+            system.add(stack, DSUOnTreeRunFrame(v: to, keep: false, phase: 0))
       else:
         for to in dt.graph[v]:
           if dt.parent[to] == v and to != dt.heavy[v]:

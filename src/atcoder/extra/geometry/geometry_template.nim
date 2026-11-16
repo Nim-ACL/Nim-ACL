@@ -4,6 +4,7 @@ when not declared ATCODER_GEOMETRY_TEMPLATE_HPP:
   import atcoder/extra/other/floatutils
   #import complex
   import atcoder/extra/other/internal_complex
+  export internal_complex
   import std/math, std/macros
   
   type Point*[Real] = Complex[Real]
