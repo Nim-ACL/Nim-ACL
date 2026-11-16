@@ -72,9 +72,19 @@ needs actual Nim smoke tests. Linux/Windows shell argument handling is covered
 at the Python level only where explicitly reported; Windows ctypes argument
 parsing and PowerShell clipboard use require a native Windows run.
 
-The unchanged line-oriented import resolver is NOT a full Nim parser. Exotic
+The line-oriented import resolver is NOT a full Nim parser. Exotic
 multiline/macro-generated import expressions remain outside the new guarantee.
 Do not interpret smoke-test success as a proof for every possible Nim program.
+
+Conditional one-line imports retain their original indentation in plain and
+embed output. Separate lexical scopes have separate deduplication state; Nim,
+not Python, selects `when` branches. Unguarded imported modules receive a
+private generated import-once guard. Distinct flattened embed inputs for the
+same module are all retained in the readable provenance comments.
+
+Nim forbids ordinary `import` inside runtime `if` and `block` scopes; regression
+tests use valid private `include` fragments there. The resolver still verifies
+all referenced library bytes, including imports in inactive conditions.
 
 ## Performance evidence boundaries
 

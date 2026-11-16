@@ -163,6 +163,46 @@ def write_bundle_module(relpath, lines, bundle_tmp):
                              ("\n".join(lines) + "\n").encode("utf-8"))
 
 
+def module_guard_indent(source):
+    """Recognize a whole-module when/const guard, not an arbitrary condition."""
+    code = [line for line in source
+            if line.strip() and not line.lstrip().startswith("#")]
+    if len(code) < 2:
+        return None
+    match = re.fullmatch(r"when not declared\s*\(?\s*([A-Za-z_][A-Za-z_0-9]*)\s*\)?\s*:",
+                         code[0])
+    if not match:
+        return None
+    body_indent = indent_level(code[1])
+    if not body_indent or not re.match(
+            r"\s+const\s+" + re.escape(match.group(1)) + r"\*?\s*=", code[1]):
+        return None
+    if any(indent_level(line) < body_indent for line in code[1:]):
+        return None
+    return body_indent
+
+
+def import_once(fname, expanded, lib_root, local_root):
+    # Unguarded modules also need import-once semantics when multiple Nim
+    # conditional branches can select the same module.
+    if module_guard_indent(read_module_text(fname, lib_root, local_root).splitlines()) is not None:
+        return expanded
+    marker = "NaclExpandedImport_" + hashlib.sha256(fname.encode("utf-8")).hexdigest()[:16]
+    return [f"when not declared({marker}):", f"  const {marker} = true",
+            *("  " + line for line in expanded)]
+
+
+def record_embed_text(fname, text):
+    # One path can have different flattened dependency bodies in different
+    # scopes. Record every distinct pre-compression input for provenance.
+    name = fname
+    variant = 1
+    while name in EMBED_TEXTS and EMBED_TEXTS[name] != text:
+        variant += 1
+        name = f"{fname} [variant {variant}]"
+    EMBED_TEXTS[name] = text
+
+
 # ----------------------------
 # recursive resolver
 # ----------------------------
@@ -180,6 +220,8 @@ def read_source(path, prefix, defined, lib_root, local_root,
     # incorrectly remove exports of unrelated, still-imported modules.
     inlined_imported_modules = set()
     source = read_module_text(path, lib_root, local_root).splitlines()
+    guard_indent = module_guard_indent(source) if depth > 0 else None
+    scopes = [(0, defined)]
 
     result = []
 
@@ -188,6 +230,16 @@ def read_source(path, prefix, defined, lib_root, local_root,
 
         line = source[i]
         spaces = indent_level(line)
+        if mode != "bundle" and line.strip() and not line.lstrip().startswith("#"):
+            while scopes[-1][0] > spaces:
+                scopes.pop()
+            if spaces > scopes[-1][0]:
+                parent_defined = scopes[-1][1]
+                # Conventional whole-module guards do not create independent
+                # import scopes; their dependencies are loaded with the module.
+                transparent = len(scopes) == 1 and spaces == guard_indent
+                scopes.append((spaces, parent_defined if transparent else set(parent_defined)))
+        scope_defined = scopes[-1][1]
 
         if WHEN_STATEMENT.match(line):
             result.append(line)
@@ -268,21 +320,27 @@ def read_source(path, prefix, defined, lib_root, local_root,
 
                     
                     expanded = read_source(
-                        fname, " " * spaces, defined,
+                        fname, " " * spaces, scope_defined,
                         lib_root, local_root, bundle_tmp,
                         mode, depth + 1
                     )
 
+                    if not expanded:
+                        result.append(" " * spaces + "discard")
+                        continue
+                    if keyword == "import":
+                        expanded = import_once(fname, expanded, lib_root, local_root)
+
                     if mode == "embed" and depth == 0:
 
                         text = "\n".join(expanded) + "\n"
-                        EMBED_TEXTS[fname] = text
+                        record_embed_text(fname, text)
                         compressed = lzma.compress(text.encode("utf-8"), preset=COMPRESSION_LEVEL)
                         
                         b64 = base64.b64encode(compressed).decode()
 
                         result.append(
-                            prefix + f'ImportExpand "{fname}" <=== "{b64}"'
+                            " " * spaces + f'ImportExpand "{fname}" <=== "{b64}"'
                         )
 
                     else:

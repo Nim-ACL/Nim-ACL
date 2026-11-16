@@ -108,6 +108,33 @@ class SubmissionTests(unittest.TestCase):
         self.assertIn("SOURCE_REF_MISMATCH",p.stderr)
         self.assertEqual(self.out.read_text(),"previous")
 
+    def test_inactive_import_still_requires_matching_source(self):
+        self.src.write_text("when false:\n  import atcoder/answer\necho 42\n")
+        self.write("src/atcoder/answer.nim", "proc answer*(): int = 43\n")
+        for mode in ("plain", "embed", "bundle"):
+            with self.subTest(mode=mode):
+                self.out.write_text("previous")
+                p = self.run_expand(mode, expected=1)
+                self.assertIn("SOURCE_REF_MISMATCH", p.stderr)
+                self.assertEqual(self.out.read_text(), "previous")
+
+    def test_embed_records_all_conditional_dependency_variants(self):
+        self.write("src/atcoder/unit.nim", "const value* = 42\n")
+        self.write("src/atcoder/answer.nim", "import atcoder/unit\nproc answer*(): int = value\n")
+        self.src.write_text("when true:\n  import atcoder/unit\n  import atcoder/answer\n"
+                            "when true:\n  import atcoder/answer\necho answer()\n")
+        self.git("add", ".")
+        self.git("-c", "user.name=f", "-c", "user.email=f@invalid", "commit", "-qm", "branches")
+        self.sha = self.git("rev-parse", "HEAD").strip()
+        self.run_expand("embed")
+        text = self.out.read_text()
+        self.assertIn("exact embed input atcoder/answer.nim [variant 2]", text)
+        for payload in re.findall(r'<=== "([A-Za-z0-9+/=]+)"', text):
+            decoded = lzma.decompress(base64.b64decode(payload)).decode()
+            # Every emitted compressed input must have a readable exact copy.
+            readable = "".join("# " + line + "\n" for line in decoded.splitlines())
+            self.assertIn(readable, text)
+
     def test_clean_new_commit_cannot_claim_old_source(self):
         self.write("src/atcoder/answer.nim", "proc answer*(): int = 43\n")
         self.git("add", ".")

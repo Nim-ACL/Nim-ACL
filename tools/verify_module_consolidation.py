@@ -9,7 +9,7 @@ Expansion uses the same internal functions as the expander unit tests. Output
 is temporary and explicitly marked local-only: unpublished source cannot pass
 the submission CLI's source/ref check, even with --preview. This script does
 not change that check or create commits. Both import orders are separate input
-files, avoiding the resolver's pre-existing conditional-import limitation.
+files so each order is compiled independently.
 """
 
 import argparse
@@ -47,10 +47,7 @@ CASES = {
     ],
     "monoid": [
         ("tests/test_commutative_monoid_public_contract.nim", False, True),
-        # This legacy fixture has conditional imports. Embed expansion of
-        # conditional imports has a pre-existing indentation limitation;
-        # the public-contract fixture covers all four modes instead.
-        ("tests/test_extra_monoid.nim", False, False),
+        ("tests/test_extra_monoid.nim", False, True),
         ("tests/extra/monoid/commutative_group_contract.nim", False, True),
     ],
     "rle": [
@@ -104,9 +101,6 @@ def main():
         if not nim.is_file():
             parser.error(f"compiler not found: {nim}; specify --nim")
     phases = list(CASES) if args.phase == "all" else [args.phase]
-    if "monoid" in phases:
-        print("NOTE: legacy test_extra_monoid uses direct mode; its conditional "
-              "imports hit the existing embed indentation limitation.", flush=True)
     sys.dont_write_bytecode = True
     spec = importlib.util.spec_from_file_location("nacl_expander", ROOT / "expander.py")
     expander = importlib.util.module_from_spec(spec)

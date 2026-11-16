@@ -200,6 +200,10 @@ trap nacl_finish EXIT
     nim cpp -r "$t"
   done
 
+  STEP="Expander transformation, provenance and conditional-scope regressions"
+  NACL_EXPANDER_NIM="$(command -v nim)" \
+    python3 -m unittest discover -s tests -p 'test_expander*.py' -v
+
   STEP="cleanup generated test artifacts"
   for t in "${tests[@]}"; do
     rm -f "${t%.nim}"
