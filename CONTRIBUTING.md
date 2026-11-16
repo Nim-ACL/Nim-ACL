@@ -10,6 +10,18 @@ Before pushing changes that touch library code, tests, or documentation, run:
 bash tools/quick_verify.sh
 ~~~
 
+For a review that must preserve existing uncommitted and staged changes, use:
+
+~~~bash
+NACL_VERIFY_WORKTREE=1 bash tools/quick_verify.sh
+~~~
+
+This opt-in mode checks generated documentation against its starting content
+and checks file contents, executable bits, and staged changes at the end. Regenerate and
+review documentation first; newly generated differences still fail validation.
+It never resets documentation, including when `CI=true`. The default clean-tree
+verification policy is unchanged.
+
 The script runs the main smoke tests for:
 
 - core ACL modules

@@ -5,6 +5,41 @@ LOG="${NACL_QUICK_VERIFY_LOG:-/tmp/nacl_quick_verify.log}"
 STATUS=OK
 STEP=init
 
+# Opt in when reviewing uncommitted changes. Compare actual source bytes and
+# staged changes with the starting state instead of requiring a clean HEAD.
+# This mode never enters the CI branch that resets generated documentation.
+nacl_worktree_state() {
+  python3 - "$1" <<'PY'
+import hashlib
+import json
+from pathlib import Path
+import subprocess
+import sys
+
+scope = ["document_ja", "document_en"] if sys.argv[1] == "docs" else []
+names = subprocess.check_output([
+    "git", "--no-optional-locks", "ls-files", "--cached", "--others",
+    "--exclude-standard", "-z", "--", *scope,
+]).split(b"\0")
+state = {}
+for raw_name in sorted(set(names) - {b""}):
+    name = raw_name.decode("utf-8")
+    path = Path(name)
+    if path.is_symlink():
+        state[name] = ["symlink", str(path.readlink())]
+    elif path.is_file():
+        state[name] = ["file", hashlib.sha256(path.read_bytes()).hexdigest(),
+                       path.stat().st_mode & 0o111]
+    else:
+        state[name] = ["missing"]
+index = subprocess.check_output([
+    "git", "--no-optional-locks", "diff", "--cached", "--binary", "--", *scope,
+])
+snapshot = {"files": state, "index": hashlib.sha256(index).hexdigest()}
+print(hashlib.sha256(json.dumps(snapshot, sort_keys=True).encode("utf-8")).hexdigest())
+PY
+}
+
 # Keep the result visible even when a failure exits the redirected group.
 exec 3>&1
 nacl_finish() {
@@ -45,6 +80,17 @@ trap nacl_finish EXIT
   STEP="enter repo"
   cd "$(dirname "$0")/.."
 
+  case "${NACL_VERIFY_WORKTREE:-0}" in
+    0) ;;
+    1)
+      STEP="snapshot existing worktree"
+      NACL_INITIAL_WORKTREE="$(nacl_worktree_state all)"
+      NACL_INITIAL_DOCS="$(nacl_worktree_state docs)"
+      echo "WORKTREE_MODE: preserve and verify existing changes"
+      ;;
+    *) echo "NACL_VERIFY_WORKTREE must be 0 or 1"; false ;;
+  esac
+
   STEP="check nim"
   nim -v >/dev/null
 
@@ -57,6 +103,9 @@ trap nacl_finish EXIT
     tests/test_extra_graph_template_directed_undirected.nim
     tests/test_extra_static_graph.nim
     tests/test_extra_boruvka.nim
+    tests/test_extra_chromatic_number.nim
+    tests/test_extra_legacy_header.nim
+    tests/test_extra_range_fenwick_2d_coexistence.nim
     tests/test_extra_chu_liu_edmonds.nim
     tests/test_extra_ja_facades.nim
     tests/test_extra_dp_basic.nim
@@ -108,6 +157,7 @@ trap nacl_finish EXIT
     tests/test_extra_aho_corasick_random.nim
     tests/test_extra_kmp.nim
     tests/test_extra_kmp_random.nim
+    tests/test_extra_kmp_compatibility.nim
     tests/test_extra_minimum_rotation.nim
     tests/test_extra_suffix_automaton.nim
     tests/test_extra_suffix_automaton_random.nim
@@ -117,6 +167,8 @@ trap nacl_finish EXIT
     tests/test_extra_fast_set_random.nim
     tests/test_extra_disjoint_sparse_table.nim
     tests/test_extra_mo.nim
+    tests/test_extra_mo_legacy.nim
+    tests/test_extra_mo_compatibility.nim
     tests/test_extra_coordinate_compression.nim
     tests/test_extra_run_length_encoding.nim
     tests/test_extra_mex_set.nim
@@ -159,6 +211,14 @@ python3 tools/postprocess_document_html.py
   fi
 
   STEP="check generated docs"
+  if [ "${NACL_VERIFY_WORKTREE:-0}" = "1" ]; then
+    if [ "$(nacl_worktree_state docs)" != "$NACL_INITIAL_DOCS" ]; then
+      echo "Generated documentation differs from the starting worktree."
+      echo "Regenerate and review documentation before running this mode."
+      git --no-pager diff --stat -- document_ja document_en
+      false
+    fi
+  else
   doc_changes="$(git status --porcelain document_ja document_en)"
   if [ -n "$doc_changes" ]; then
     echo "Generated documentation changed:"
@@ -181,6 +241,7 @@ python3 tools/postprocess_document_html.py
       echo "or commit the regenerated documentation."
       false
     fi
+  fi
   fi
 
   STEP="cleanup generated files after docs"
@@ -1153,7 +1214,7 @@ grep -qx \
   "$cumulative_sum_2d_tmp/cumulative_sum_2d_contract_refc.out"
 
 grep -qx \
-  'DUAL_CUMULATIVE_SUM_2D_LEGACY_OK' \
+  'DUAL_CUMULATIVE_SUM_2D_INCLUSIVE_OK' \
   "$cumulative_sum_2d_tmp/dual_cumulative_sum_2d_contract_refc.out"
 
 rm -rf "$cumulative_sum_2d_tmp"
@@ -1294,9 +1355,17 @@ STEP="Nim version matrix audit"
 python3 tools/audit_nim_version_matrix.py
 
 STEP="final clean"
+  if [ "${NACL_VERIFY_WORKTREE:-0}" = "1" ]; then
+    if [ "$(nacl_worktree_state all)" != "$NACL_INITIAL_WORKTREE" ]; then
+      echo "Worktree or staged changes differ from the starting state."
+      git status --short
+      false
+    fi
+  else
   if [ -n "$(git status --porcelain)" ]; then
     git status --short
     false
+  fi
   fi
 
 } >>"$LOG" 2>&1
