@@ -71,6 +71,17 @@ export unit
 ''', encoding='utf-8')
         self.assertNotIn('export unit', self.expand('plain'))
 
+    def test_nested_unguarded_module_keeps_module_level_indentation(self):
+        actual = self.expand('plain')
+        # unit has no `when` guard. Its trailing statement must be aligned
+        # with its procedure, rather than introduce an invalid new indent.
+        self.assertIn('  proc answer*(): int = 42\n  discard\n', actual)
+
+    def test_embed_nested_unguarded_module_keeps_indentation(self):
+        self.expand('embed')
+        actual = ex.EMBED_TEXTS['atcoder/bridge.nim']
+        self.assertIn('  proc answer*(): int = 42\n  discard\n', actual)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

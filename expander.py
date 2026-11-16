@@ -294,7 +294,9 @@ def read_source(path, prefix, defined, lib_root, local_root,
         i += 1
 
     if depth > 0 and mode != "bundle":
-        result.append(prefix + "discard")
+        # The caller adds the import site's indentation to every returned line.
+        # A second prefix here over-indents unguarded modules' trailing discard.
+        result.append("discard")
 
     if mode == "bundle" and depth > 0:
         write_bundle_module(path, result, bundle_tmp)
