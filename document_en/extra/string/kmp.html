@@ -270,9 +270,13 @@ pre.nim-line-numbers .code-line::before {
 <h2 id="complexity">Complexity</h2>
 <ul>
 <li>preprocessing: <code>O(m)</code></li>
-<li>search: <code>O(n)</code></li>
-<li>memory: <code>O(m)</code></li>
+<li>search: <code>O(n)</code>; <code>findFirst</code> / <code>contains</code> stop at the first match</li>
+<li>matcher storage: <code>O(m)</code></li>
+<li>extra search storage: <code>O(k)</code> for <code>findAll</code> with k matches, <code>O(1)</code> otherwise</li>
 </ul>
+<p>The string overloads view the text without copying it to a character sequence.
+Patterns must be non-empty; empty texts are supported. The legacy
+<code>KnuthMorrisPratt(text, pattern)</code> entry point delegates to the same scanner.</p>
 <!-- NIM_ACL_PROBLEM_EXAMPLES_V1 -->
 <h2 id="practice-problems">Practice problems</h2>
 <details class="problem-examples">

@@ -26,8 +26,13 @@ doAssert matcher.findFirst("zzabazz") == 2
 ## Complexity
 
 - preprocessing: `O(m)`
-- search: `O(n)`
-- memory: `O(m)`
+- search: `O(n)`; `findFirst` / `contains` stop at the first match
+- matcher storage: `O(m)`
+- extra search storage: `O(k)` for `findAll` with k matches, `O(1)` otherwise
+
+The string overloads view the text without copying it to a character sequence.
+Patterns must be non-empty; empty texts are supported. The legacy
+`KnuthMorrisPratt(text, pattern)` entry point delegates to the same scanner.
 
 <!-- NIM_ACL_PROBLEM_EXAMPLES_V1 -->
 ## Practice problems

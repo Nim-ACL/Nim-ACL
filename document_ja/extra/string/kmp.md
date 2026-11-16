@@ -66,8 +66,12 @@ doAssert matcher.findAll(@[1, 2, 1, 2, 1]) == @[0, 2]
 pattern 長を `m`、text 長を `n` とすると、
 
 - 前処理: `O(m)`
-- 検索: `O(n)`
-- memory: `O(m)`
+- 検索: `O(n)`（`findFirst` / `contains` は最初の一致で終了）
+- matcherの保存領域: `O(m)`
+- 検索の追加領域: `findAll` は一致数kに対して `O(k)`、その他は `O(1)`
+
+string版もtext全体をchar列へコピーしません。空textの検索に対応します。
+旧 `KnuthMorrisPratt(text, pattern)` は同じ検索実装へ委譲します。
 
 <!-- NIM_ACL_PROBLEM_EXAMPLES_V1 -->
 ## このライブラリが使える問題

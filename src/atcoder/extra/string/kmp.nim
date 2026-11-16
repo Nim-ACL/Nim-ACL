@@ -6,12 +6,6 @@ when not declared ATCODER_EXTRA_STRING_KMP_HPP:
       pattern*: seq[T]
       prefix*: seq[int]
 
-  proc toCharSeq(s: string): seq[char] =
-    result = newSeq[char](s.len)
-
-    for i in 0 ..< s.len:
-      result[i] = s[i]
-
   proc prefixFunction*[T](s: openArray[T]): seq[int] =
     ## Returns the prefix-function array.
     ##
@@ -31,8 +25,7 @@ when not declared ATCODER_EXTRA_STRING_KMP_HPP:
       result[i] = j
 
   proc prefixFunction*(s: string): seq[int] =
-    let a = toCharSeq(s)
-    prefixFunction[char](a)
+    prefixFunction[char](s.toOpenArray(0, s.high))
 
   proc initKMP*[T](pattern: openArray[T]): KMPMatcher[T] =
     ## Builds a KMP matcher for a non-empty pattern.
@@ -46,14 +39,13 @@ when not declared ATCODER_EXTRA_STRING_KMP_HPP:
     result.prefix = prefixFunction(pattern)
 
   proc initKMP*(pattern: string): KMPMatcher[char] =
-    let a = toCharSeq(pattern)
-    initKMP[char](a)
+    initKMP[char](pattern.toOpenArray(0, pattern.high))
 
-  proc findAll*[T](
+  iterator matchPositions[T](
     matcher: KMPMatcher[T],
     text: openArray[T]
-  ): seq[int] =
-    ## Returns all starting positions, including overlapping matches.
+  ): int =
+    ## Shared inline scanner. Consumers can stop at the first match.
     let m = matcher.pattern.len
 
     doAssert m > 0
@@ -68,48 +60,51 @@ when not declared ATCODER_EXTRA_STRING_KMP_HPP:
         j.inc
 
       if j == m:
-        result.add i - m + 1
+        yield i - m + 1
         j = matcher.prefix[j - 1]
+
+  proc findAll*[T](
+    matcher: KMPMatcher[T],
+    text: openArray[T]
+  ): seq[int] =
+    ## Returns all starting positions, including overlapping matches.
+    for position in matcher.matchPositions(text):
+      result.add position
 
   proc findAll*(
     matcher: KMPMatcher[char],
     text: string
   ): seq[int] =
-    let a = toCharSeq(text)
-    matcher.findAll(a)
+    findAll[char](matcher, text.toOpenArray(0, text.high))
 
   proc findFirst*[T](
     matcher: KMPMatcher[T],
     text: openArray[T]
   ): int =
     ## Returns the first starting position, or `-1`.
-    let matches = matcher.findAll(text)
-
-    if matches.len == 0:
-      -1
-    else:
-      matches[0]
+    for position in matcher.matchPositions(text):
+      return position
+    -1
 
   proc findFirst*(
     matcher: KMPMatcher[char],
     text: string
   ): int =
-    let a = toCharSeq(text)
-    matcher.findFirst(a)
+    findFirst[char](matcher, text.toOpenArray(0, text.high))
 
   proc countMatches*[T](
     matcher: KMPMatcher[T],
     text: openArray[T]
   ): int =
     ## Returns the number of occurrences, including overlaps.
-    matcher.findAll(text).len
+    for position in matcher.matchPositions(text):
+      result.inc
 
   proc countMatches*(
     matcher: KMPMatcher[char],
     text: string
   ): int =
-    let a = toCharSeq(text)
-    matcher.countMatches(a)
+    countMatches[char](matcher, text.toOpenArray(0, text.high))
 
   proc contains*[T](
     matcher: KMPMatcher[T],

@@ -1,26 +1,27 @@
-# knuth_morris_pratt
+# KnuthMorrisPrattの旧API互換入口
 
-このページは自動生成された下書きです。
+検索本体は[kmp](./kmp.html)に統合されています。
+このmoduleは既存のimport pathと関数名・引数順を維持する薄い互換層です。
 
-公開 API と基本的な import パスを整理しています。詳細な説明、計算量、注意点、使用例は必要に応じて追記してください。
+## API
 
-## import
-
-    import atcoder/extra/string/knuth_morris_pratt
-
-## 公開 API
-
-    const ATCODER_KNUTH_MORRIS_PRATT_HPP* = 1
-    proc KnuthMorrisPratt*(t,p:string):seq[int] =
-
-## 概要
-
-TODO: このライブラリの用途と使いどころを記述してください。
+~~~nim
+proc KnuthMorrisPratt(t, p: string): seq[int]
+~~~
 
 ## 使用例
 
-TODO: 使用例を追加してください。
+~~~nim
+import atcoder/extra/string/knuth_morris_pratt
 
-## 注意
+doAssert KnuthMorrisPratt("ababa", "aba") == @[0, 2]
+~~~
 
-TODO: 制約、前提条件、落とし穴を記述してください。
+第1引数tがtext、第2引数pがpatternです。重なる一致もすべて返します。
+文字列はbyte単位で比較し、返り値は0始まりのbyte位置です。
+空textは空の結果を返し、従来の `KnuthMorrisPratt("", "") == @[]` も維持します。
+textが空でない場合、patternは空にできません。
+
+長さnのtext・長さmのpatternに対して `O(n + m)` 時間、
+matcherの `O(m)` と一致位置の `O(k)` の領域を使います。
+新規コードや同じpatternで繰り返し検索する場合は `initKMP(p)` を使ってください。
