@@ -17,7 +17,7 @@ when not declared ATCODER_CHROMATIC_NUMBER_HPP:
       ind[0] = 1
       for S in 1 ..< 2^N:
         let u = countTrailingZeroBits(S)
-        ind[S] = ind[S xor (1 shl u)] + ind[(S xor (1 shr u)) and not es[u]]
+        ind[S] = ind[S xor (1 shl u)] + ind[(S xor (1 shl u)) and not es[u]]
       for i in 1 ..< result:
         var all = 0
         for j in 0 ..< 2^N:

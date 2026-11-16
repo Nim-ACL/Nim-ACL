@@ -16,7 +16,7 @@ when not declared ATCODER_EXTRA_HEADER_HEADER_HPP:
   import std/algorithm as algorithm_lib
   import std/sequtils as sequtils_lib
   import std/macros as macros_lib
-  import std/math as math_lib
+  import std/math as math_lib except ceilDiv
   import std/sets as sets_lib
   import std/tables as tables_lib
   import std/strutils as strutils_lib
@@ -26,7 +26,7 @@ when not declared ATCODER_EXTRA_HEADER_HEADER_HPP:
   import std/streams as streams_lib
 
 
-  import atcoder/extra/other/internal_sugar
+  import atcoder/extra/forward_compatibility/internal_sugar
 #  import std/sugar
   import atcoder/extra/other/reader
   import atcoder/extra/other/cfor
