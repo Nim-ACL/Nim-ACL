@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Focused P0/Mo/KMP checks against local working-tree sources.
+"""Focused consolidation and API checks against local working-tree sources.
 
 Run each stage with both installed compilers:
   python3 tools/verify_module_consolidation.py --phase mo
@@ -44,6 +44,14 @@ CASES = {
         ("tests/test_extra_kmp_random.nim", False, True),
         ("tests/test_extra_kmp_compatibility.nim", False, True),
         ("tests/test_extra_kmp_compatibility.nim", True, True),
+    ],
+    "monoid": [
+        ("tests/test_commutative_monoid_public_contract.nim", False, True),
+        # This legacy fixture has conditional imports. Embed expansion of
+        # conditional imports has a pre-existing indentation limitation;
+        # the public-contract fixture covers all four modes instead.
+        ("tests/test_extra_monoid.nim", False, False),
+        ("tests/extra/monoid/commutative_group_contract.nim", False, True),
     ],
 }
 
@@ -91,6 +99,9 @@ def main():
         if not nim.is_file():
             parser.error(f"compiler not found: {nim}; specify --nim")
     phases = list(CASES) if args.phase == "all" else [args.phase]
+    if "monoid" in phases:
+        print("NOTE: legacy test_extra_monoid uses direct mode; its conditional "
+              "imports hit the existing embed indentation limitation.", flush=True)
     sys.dont_write_bytecode = True
     spec = importlib.util.spec_from_file_location("nacl_expander", ROOT / "expander.py")
     expander = importlib.util.module_from_spec(spec)
