@@ -18,11 +18,7 @@ when not declared ATCODER_EXTRA_ALGORITHM_RUN_LENGTH_ENCODING_HPP:
     s: string
   ): seq[Run[char]] =
     ## String overload.
-    for ch in s:
-      if result.len == 0 or result[^1].value != ch:
-        result.add (value: ch, count: 1)
-      else:
-        result[^1].count.inc
+    runLengthEncode[char](s)
 
   proc rle*[T](
     a: openArray[T]

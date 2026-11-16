@@ -53,6 +53,11 @@ CASES = {
         ("tests/test_extra_monoid.nim", False, False),
         ("tests/extra/monoid/commutative_group_contract.nim", False, True),
     ],
+    "rle": [
+        ("tests/test_extra_run_length_encoding.nim", False, True),
+        ("tests/test_run_length_compatibility.nim", False, True),
+        ("tests/test_run_length_compatibility.nim", True, True),
+    ],
 }
 
 
