@@ -105,6 +105,7 @@ trap nacl_finish EXIT
     tests/test_extra_boruvka.nim
     tests/test_extra_chromatic_number.nim
     tests/test_extra_legacy_header.nim
+    tests/test_extra_divutils.nim
     tests/test_extra_range_fenwick_2d_coexistence.nim
     tests/test_extra_chu_liu_edmonds.nim
     tests/test_extra_ja_facades.nim
@@ -177,6 +178,7 @@ trap nacl_finish EXIT
     tests/test_extra_tree_backend_common_interface.nim
     tests/test_extra_graph_shortest_paths.nim
     tests/test_extra_graph_structural.nim
+    tests/test_extra_lowlink.nim
     tests/test_extra_universal_segtree.nim
     tests/test_extra_universal_segtree_stress.nim
     tests/test_dsu.nim
@@ -186,6 +188,7 @@ trap nacl_finish EXIT
     tests/test_modint.nim
     tests/test_convolution.nim
     tests/test_scc.nim
+    tests/test_internal_scc_iterative_deep.nim
     tests/test_maxflow.nim
     tests/test_mincostflow.nim
   )

@@ -14,11 +14,16 @@ when not declared ATCODER_INTERNAL_SCC_HPP:
     n:int
     edges:seq[(int,edge)]
 
-  proc init_internal_scc_graph*(n:int):auto = internal_scc_graph(n:n, edges:newSeq[(int,edge)]())
+  proc init_internal_scc_graph*(n:int):auto =
+    assert n >= 0
+    internal_scc_graph(n:n, edges:newSeq[(int,edge)]())
   
   proc num_vertices*(self: internal_scc_graph):int =  self.n
 
-  proc add_edge*(self: var internal_scc_graph, src, dst:int) = self.edges.add((src, edge(dst:dst)))
+  proc add_edge*(self: var internal_scc_graph, src, dst:int) =
+    assert 0 <= src and src < self.n
+    assert 0 <= dst and dst < self.n
+    self.edges.add((src, edge(dst:dst)))
 
   # @return pair of (# of scc, scc id)
   #

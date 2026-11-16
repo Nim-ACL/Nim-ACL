@@ -83,28 +83,36 @@ when not declared ATCODER_EXTRA_GRAPH_UNDIRECTED_DECOMPOSITION_HPP:
       if result.len == 0 or result[^1] != x:
         result.add x
 
-  proc biconnectedComponents*(
-    g: UndirectedGraph
+  proc lowLinkUndirected*(
+    g: UndirectedGraph,
+    buildComponents: static bool = false
   ): BiconnectedComponentsResult =
-    ## Computes vertex-biconnected components, articulation vertices,
-    ## and bridges with Tarjan's low-link algorithm.
+    ## Shared iterative low-link traversal. Without components, articulation
+    ## vertices and bridge ids are returned in DFS completion order.
+    ## The legacy Graph adapter also uses this traversal.
+    type DfsFrame = object
+      vertex, parentEdge, nextEdge, childCount: int
+
     let n = g.n
 
     result.ord = newSeq[int](n)
     result.low = newSeq[int](n)
-    result.componentOfEdge = newSeq[int](g.edgeCount)
+    when buildComponents:
+      result.componentOfEdge = newSeq[int](g.edgeCount)
 
     for v in 0 ..< n:
       result.ord[v] = -1
       result.low[v] = -1
 
-    for edgeId in 0 ..< g.edgeCount:
-      result.componentOfEdge[edgeId] = -1
+    when buildComponents:
+      for edgeId in 0 ..< g.edgeCount:
+        result.componentOfEdge[edgeId] = -1
 
     var
       timer = 0
       edgeStack: seq[int] = @[]
       articulationFlag = newSeq[bool](n)
+      frames = newSeqOfCap[DfsFrame](n)
 
     proc emitComponent(stopEdge: int, state: var BiconnectedComponentsResult) =
       var component: seq[int] = @[]
@@ -135,66 +143,76 @@ when not declared ATCODER_EXTRA_GRAPH_UNDIRECTED_DECOMPOSITION_HPP:
       state.edgeComponents.add component
       state.vertexComponents.add sortedUnique(vertices)
 
-    proc dfs(v, parentEdge: int, state: var BiconnectedComponentsResult) =
-      state.ord[v] = timer
-      state.low[v] = timer
-      timer.inc
-
-      var childCount = 0
-
-      for e in g.adj[v]:
-        if e.id == parentEdge:
-          continue
-
-        let to = e.to
-
-        if state.ord[to] < 0:
-          childCount.inc
-          edgeStack.add e.id
-
-          dfs(to, e.id, state)
-
-          state.low[v] = min(state.low[v], state.low[to])
-
-          if state.low[to] >= state.ord[v]:
-            if parentEdge >= 0 or childCount > 1:
-              articulationFlag[v] = true
-
-            emitComponent(e.id, state)
-
-          if state.low[to] > state.ord[v]:
-            state.bridges.add e.id
-
-        elif state.ord[to] < state.ord[v]:
-          # Back edge to an ancestor. Edge ids make parallel edges safe.
-          edgeStack.add e.id
-          state.low[v] = min(state.low[v], state.ord[to])
-
     for start in 0 ..< n:
       if result.ord[start] >= 0:
         continue
 
-      dfs(start, -1, result)
-      doAssert edgeStack.len == 0
+      result.ord[start] = timer
+      result.low[start] = timer
+      timer.inc
+      frames.add DfsFrame(vertex: start, parentEdge: -1)
 
-    for v in 0 ..< n:
-      if articulationFlag[v]:
-        result.articulation.add v
+      while frames.len > 0:
+        let v = frames[^1].vertex
+        if frames[^1].nextEdge < g.adj[v].len:
+          let e = g.adj[v][frames[^1].nextEdge]
+          frames[^1].nextEdge.inc
+          if e.id == frames[^1].parentEdge:
+            continue
 
-    result.articulation.sort()
-    result.bridges.sort()
+          if result.ord[e.to] < 0:
+            frames[^1].childCount.inc
+            when buildComponents:
+              edgeStack.add e.id
+            result.ord[e.to] = timer
+            result.low[e.to] = timer
+            timer.inc
+            frames.add DfsFrame(vertex: e.to, parentEdge: e.id)
+          elif result.ord[e.to] < result.ord[v]:
+            # Skip only the parent edge, not other edges to the parent vertex.
+            when buildComponents:
+              edgeStack.add e.id
+            result.low[v] = min(result.low[v], result.ord[e.to])
+        else:
+          let finished = frames.pop()
+          if articulationFlag[v]:
+            result.articulation.add v
+          if finished.parentEdge >= 0:
+            let parent = frames[^1].vertex
+            result.low[parent] = min(result.low[parent], result.low[v])
+            if result.low[v] >= result.ord[parent]:
+              if frames[^1].parentEdge >= 0 or frames[^1].childCount > 1:
+                articulationFlag[parent] = true
+              when buildComponents:
+                emitComponent(finished.parentEdge, result)
+            if result.low[v] > result.ord[parent]:
+              result.bridges.add finished.parentEdge
 
-    # Add singleton blocks for isolated vertices.
-    var belongs = newSeq[bool](n)
+      when buildComponents:
+        doAssert edgeStack.len == 0
 
-    for component in result.vertexComponents:
-      for v in component:
-        belongs[v] = true
+    when buildComponents:
+      result.articulation.sort()
+      result.bridges.sort()
 
-    for v in 0 ..< n:
-      if not belongs[v]:
-        result.edgeComponents.add @[]
-        result.vertexComponents.add @[v]
+      # Add singleton blocks for isolated vertices.
+      var belongs = newSeq[bool](n)
+
+      for component in result.vertexComponents:
+        for v in component:
+          belongs[v] = true
+
+      for v in 0 ..< n:
+        if not belongs[v]:
+          result.edgeComponents.add @[]
+          result.vertexComponents.add @[v]
+
+  proc biconnectedComponents*(
+    g: UndirectedGraph
+  ): BiconnectedComponentsResult =
+    ## Computes vertex-biconnected components, articulation vertices,
+    ## and bridges with the shared low-link traversal.
+    g.lowLinkUndirected(buildComponents = true)
 
   proc twoEdgeConnectedComponents*(
     g: UndirectedGraph,
