@@ -120,6 +120,9 @@ trap nacl_finish EXIT
     tests/test_extra_static_eratosthenes.nim
     tests/test_extra_convert_base.nim
     tests/test_extra_rolling_hash_append.nim
+    tests/test_rolling_hash_public_contract.nim
+    tests/test_rolling_hash_legacy_contract.nim
+    tests/test_rolling_hash_import_order.nim
     tests/test_extra_slope_trick_merge.nim
     tests/test_extra_bellman_ford_path.nim
     tests/test_extra_xor_basis.nim

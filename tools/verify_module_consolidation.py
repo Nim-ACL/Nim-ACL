@@ -68,6 +68,12 @@ CASES = {
         ("tests/test_compress_header.nim", False, True),
         ("tests/test_extra_coordinate_compression.nim", False, False),
     ],
+    "rolling_hash": [
+        ("tests/test_rolling_hash_public_contract.nim", False, True),
+        ("tests/test_rolling_hash_legacy_contract.nim", False, True),
+        ("tests/test_rolling_hash_import_order.nim", False, False),
+        ("tests/test_extra_rolling_hash_append.nim", False, True),
+    ],
 }
 
 
@@ -103,6 +109,8 @@ def main():
     parser.add_argument("--phase", choices=["all", *CASES], default="all")
     parser.add_argument("--nim", action="append", type=Path)
     parser.add_argument("--mm", choices=["refc", "orc"])
+    parser.add_argument("--define", action="append", default=[],
+                        help="pass a Nim define, e.g. rhReverseImports")
     parser.add_argument("--assertions", choices=["on", "off"],
                         help="override assertions; Compress checks assert vs doAssert")
     parser.add_argument("--mode", action="append", choices=MODES)
@@ -164,12 +172,14 @@ def main():
                         command.append(f"--mm:{args.mm}")
                     if args.assertions:
                         command.append(f"--assertions:{args.assertions}")
+                    command.extend(f"-d:{name}" for name in args.define)
                     run = subprocess.run(
                         [*command, str(source)], cwd=temp,
                         capture_output=True, text=True, timeout=180,
                     )
                     results.append(dict(phase=phase, version=version, source=name,
-                                        reverse=reverse, mode=mode, exit=run.returncode))
+                                        reverse=reverse, mode=mode, mm=args.mm,
+                                        defines=args.define, exit=run.returncode))
                     status = "PASS" if run.returncode == 0 else "FAIL"
                     print(f"{status}: {version}; {name}; reverse={reverse}; {mode}", flush=True)
                     if run.returncode:

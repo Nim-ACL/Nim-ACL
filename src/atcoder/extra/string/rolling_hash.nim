@@ -49,7 +49,7 @@ when not declared ATCODER_EXTRA_STRING_ROLLING_HASH_HPP:
 
  
   import hashes
-  proc hash*[RH: RH_Base](a:RH):Hash = a.h.hash
+  proc hash*[RH: RH_Base](a:RH):Hash {.inline.} = a.uint.hash
   
   #const base* = 1000000007'u
   
@@ -107,8 +107,8 @@ when not declared ATCODER_EXTRA_STRING_ROLLING_HASH_HPP:
   proc `&`*(c:SomeInteger or char, a:PartialRollingHash):PartialRollingHash =
     result.h = RHBase(c) * getPower(a.len, a.base) + a.h
     result.len = a.len + 1
-  proc `&`*(a:PartialRollingHash, c:string):PartialRollingHash = a & initRollingHash(c)[0 .. ^1]
-  proc `&`*(c:string, a:PartialRollingHash):PartialRollingHash = initRollingHash(c)[0 .. ^1] & a
+  proc `&`*(a:PartialRollingHash, c:string):PartialRollingHash = a & initRollingHash(c, a.base)[0 .. ^1]
+  proc `&`*(c:string, a:PartialRollingHash):PartialRollingHash = initRollingHash(c, a.base)[0 .. ^1] & a
 
   proc LCP*(self, b:RollingHash; p1, p2:RangeType):int =
     let
