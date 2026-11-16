@@ -173,6 +173,9 @@ trap nacl_finish EXIT
     tests/test_extra_mo_legacy.nim
     tests/test_extra_mo_compatibility.nim
     tests/test_extra_coordinate_compression.nim
+    tests/test_compress_contract.nim
+    tests/test_compress_legacy_standalone.nim
+    tests/test_compress_header.nim
     tests/test_extra_run_length_encoding.nim
     tests/test_run_length_compatibility.nim
     tests/test_extra_mex_set.nim

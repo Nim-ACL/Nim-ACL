@@ -61,6 +61,13 @@ CASES = {
         ("tests/extra/structure/dense_range_fenwicktree_2d_contract.nim", False, False),
         ("tests/extra/structure/sparse_range_fenwicktree_2d_contract.nim", False, False),
     ],
+    "compress": [
+        ("tests/test_compress_contract.nim", False, True),
+        ("tests/test_compress_contract.nim", True, True),
+        ("tests/test_compress_legacy_standalone.nim", False, True),
+        ("tests/test_compress_header.nim", False, True),
+        ("tests/test_extra_coordinate_compression.nim", False, False),
+    ],
 }
 
 
@@ -96,6 +103,8 @@ def main():
     parser.add_argument("--phase", choices=["all", *CASES], default="all")
     parser.add_argument("--nim", action="append", type=Path)
     parser.add_argument("--mm", choices=["refc", "orc"])
+    parser.add_argument("--assertions", choices=["on", "off"],
+                        help="override assertions; Compress checks assert vs doAssert")
     parser.add_argument("--mode", action="append", choices=MODES)
     parser.add_argument("--report", type=Path)
     args = parser.parse_args()
@@ -153,6 +162,8 @@ def main():
                     ]
                     if args.mm:
                         command.append(f"--mm:{args.mm}")
+                    if args.assertions:
+                        command.append(f"--assertions:{args.assertions}")
                     run = subprocess.run(
                         [*command, str(source)], cwd=temp,
                         capture_output=True, text=True, timeout=180,

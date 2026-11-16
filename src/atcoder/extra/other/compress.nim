@@ -1,9 +1,18 @@
 when not declared ATCODER_COMPRESS_HPP:
   const ATCODER_COMPRESS_HPP* = 1
+
+  import std/[algorithm, sets]
+
   type Compress[T] = seq[T]
 
   proc build*[T](v:var Compress[T]) =
-    v = v.toSet.toSeq.sorted
+    # Materialize before replacing v: a self-assignment can destroy it
+    # before the HashSet conversion reads its elements under ORC.
+    let unique = toHashSet(v)
+    var built = newSeqOfCap[T](unique.len)
+    for x in sets.items(unique): built.add x
+    built.sort()
+    swap(v, built)
   proc initCompress*[T](a:varargs[seq[T]]):Compress[T] =
     if a.len == 0:return
     for p in a:

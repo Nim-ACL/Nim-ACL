@@ -61,6 +61,186 @@
     };
   </script>
   <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+<style id="nim-acl-highlight-style-v1">
+:root {
+  --nim-code-background: #f6f8fa;
+  --nim-code-foreground: #24292f;
+  --nim-code-border: #d0d7de;
+  --nim-code-line-number: #8c959f;
+  --nim-code-line-number-border: #d8dee4;
+
+  --nim-token-keyword: #8250df;
+  --nim-token-string: #0a7f37;
+  --nim-token-escape: #116329;
+  --nim-token-number: #0550ae;
+  --nim-token-comment: #6e7781;
+  --nim-token-operator: #cf222e;
+  --nim-token-punctuation: #57606a;
+  --nim-token-identifier: #24292f;
+  --nim-token-directive: #953800;
+  --nim-token-hyperlink: #0969da;
+  --nim-token-other: #24292f;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --nim-code-background: #161b22;
+    --nim-code-foreground: #c9d1d9;
+    --nim-code-border: #30363d;
+    --nim-code-line-number: #7d8590;
+    --nim-code-line-number-border: #30363d;
+
+    --nim-token-keyword: #d2a8ff;
+    --nim-token-string: #a5d6ff;
+    --nim-token-escape: #79c0ff;
+    --nim-token-number: #79c0ff;
+    --nim-token-comment: #8b949e;
+    --nim-token-operator: #ff7b72;
+    --nim-token-punctuation: #c9d1d9;
+    --nim-token-identifier: #c9d1d9;
+    --nim-token-directive: #ffa657;
+    --nim-token-hyperlink: #58a6ff;
+    --nim-token-other: #c9d1d9;
+  }
+}
+
+html[data-theme="dark"],
+html.dark,
+body.dark,
+body[data-theme="dark"] {
+  --nim-code-background: #161b22;
+  --nim-code-foreground: #c9d1d9;
+  --nim-code-border: #30363d;
+  --nim-code-line-number: #7d8590;
+  --nim-code-line-number-border: #30363d;
+
+  --nim-token-keyword: #d2a8ff;
+  --nim-token-string: #a5d6ff;
+  --nim-token-escape: #79c0ff;
+  --nim-token-number: #79c0ff;
+  --nim-token-comment: #8b949e;
+  --nim-token-operator: #ff7b72;
+  --nim-token-punctuation: #c9d1d9;
+  --nim-token-identifier: #c9d1d9;
+  --nim-token-directive: #ffa657;
+  --nim-token-hyperlink: #58a6ff;
+  --nim-token-other: #c9d1d9;
+}
+
+pre.nim-code {
+  position: relative;
+  overflow: auto;
+  box-sizing: border-box;
+  tab-size: 2;
+
+  background: var(--nim-code-background);
+  color: var(--nim-code-foreground);
+  border: 1px solid var(--nim-code-border);
+  border-radius: 7px;
+}
+
+pre.nim-code code {
+  display: block;
+  box-sizing: border-box;
+  min-width: max-content;
+
+  color: var(--nim-code-foreground);
+  background: transparent;
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    SF Mono,
+    Menlo,
+    Monaco,
+    Consolas,
+    Liberation Mono,
+    monospace;
+  line-height: 1.55;
+}
+
+pre.nim-line-numbers code {
+  counter-reset: nim-code-line;
+}
+
+pre.nim-line-numbers .code-line {
+  display: block;
+  position: relative;
+  min-height: 1.55em;
+  padding-left: 4.25rem;
+  padding-right: 1rem;
+  white-space: pre;
+}
+
+pre.nim-line-numbers .code-line::before {
+  counter-increment: nim-code-line;
+  content: counter(nim-code-line);
+
+  position: absolute;
+  left: 0;
+  top: 0;
+  box-sizing: border-box;
+  width: 3.25rem;
+  padding-right: 0.75rem;
+
+  color: var(--nim-code-line-number);
+  border-right: 1px solid var(--nim-code-line-number-border);
+  text-align: right;
+
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: none;
+}
+
+.tok-keyword {
+  color: var(--nim-token-keyword);
+  font-weight: 650;
+}
+
+.tok-string {
+  color: var(--nim-token-string);
+}
+
+.tok-escape {
+  color: var(--nim-token-escape);
+  font-weight: 600;
+}
+
+.tok-number {
+  color: var(--nim-token-number);
+}
+
+.tok-comment {
+  color: var(--nim-token-comment);
+  font-style: italic;
+}
+
+.tok-operator {
+  color: var(--nim-token-operator);
+}
+
+.tok-punctuation {
+  color: var(--nim-token-punctuation);
+}
+
+.tok-identifier {
+  color: var(--nim-token-identifier);
+}
+
+.tok-directive {
+  color: var(--nim-token-directive);
+  font-weight: 600;
+}
+
+.tok-hyperlink {
+  color: var(--nim-token-hyperlink);
+  text-decoration: underline;
+}
+
+.tok-other {
+  color: var(--nim-token-other);
+}
+</style>
 </head>
 <body>
   <header class="site-header">
@@ -71,8 +251,9 @@
   </header>
   <main>
 <h1 id="compress">compress</h1>
-<p>このページは自動生成された下書きです。</p>
-<p>公開 API と基本的な import パスを整理しています。詳細な説明、計算量、注意点、使用例は必要に応じて追記してください。</p>
+<p>HashSet で重複を除いてから異なる値だけをソートする、legacy の座標圧縮 API です。
+戻り値は <code>seq[T]</code> と同じ表現です。複数の seq をまとめて構築できます。
+header や標準ライブラリを別に import する必要はありません。</p>
 <h2 id="import">import</h2>
 <pre><code>import atcoder/extra/other/compress
 </code></pre>
@@ -85,11 +266,55 @@ proc `{}`*[T](c:Compress[T], a:T):int = c.id(a)
 proc val*[T](c:Compress[T], i:int):T = c[i]
 </code></pre>
 <h2 id="_1">概要</h2>
-<p>TODO: このライブラリの用途と使いどころを記述してください。</p>
+<p><code>initCompress[T](a: varargs[seq[T]])</code> は各入力を連結し、昇順・重複なしの seq を返します。
+引数がない場合も空 seq を返します。<code>Compress[T]</code> はモジュール内部の seq 別名で、
+型名自体は export していません。戻り値には <code>len</code>、<code>[]</code>、反復、<code>add</code> などの seq 操作を使えます。</p>
+<p><code>build(v)</code> は通常の <code>seq[T]</code> にも使え、生成を別 seq で完了してから <code>v</code> を置き換えます。
+検索の前には昇順に整列しておく必要があります。</p>
+<table>
+<thead>
+<tr>
+<th>API</th>
+<th>契約</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id(c, a)</code> / <code>c{a}</code></td>
+<td>標準 <code>binarySearch</code> が返す一致位置。欠損時は <code>assert</code></td>
+</tr>
+<tr>
+<td><code>val(c, i)</code></td>
+<td><code>c[i]</code> と同じ。範囲検査が有効なら不正添字は <code>IndexDefect</code></td>
+</tr>
+</tbody>
+</table>
+<p>欠損時のメッセージには <code>Error: No such value:</code> と値を含みます。
+<code>--assertions:off</code> では欠損時に <code>-1</code> を返します。
+構築には T の hash・等値比較・順序比較が必要です。
+<code>id</code> / <code>{}</code> は assertion が有効な場合、診断用の <code>$</code> も必要とします。</p>
 <h2 id="_2">使用例</h2>
-<p>TODO: 使用例を追加してください。</p>
+<pre class="nim-code nim-acl-highlighted nim-line-numbers"><code class="language-nim nim-acl-highlighted"><span class="code-line"><span class="tok-keyword">import</span> <span class="tok-identifier">atcoder</span><span class="tok-operator">/</span><span class="tok-identifier">extra</span><span class="tok-operator">/</span><span class="tok-identifier">other</span><span class="tok-operator">/</span><span class="tok-identifier">compress</span></span><span class="code-line"></span><span class="code-line"><span class="tok-keyword">var</span> <span class="tok-identifier">c</span> <span class="tok-operator">=</span> <span class="tok-identifier">initCompress</span><span class="tok-punctuation">[</span><span class="tok-identifier">int</span><span class="tok-punctuation">]</span><span class="tok-punctuation">(</span><span class="tok-operator">@</span><span class="tok-punctuation">[</span><span class="tok-number">100</span><span class="tok-punctuation">,</span> <span class="tok-operator">-</span><span class="tok-number">5</span><span class="tok-punctuation">,</span> <span class="tok-number">100</span><span class="tok-punctuation">]</span><span class="tok-punctuation">,</span> <span class="tok-operator">@</span><span class="tok-punctuation">[</span><span class="tok-number">7</span><span class="tok-punctuation">,</span> <span class="tok-operator">-</span><span class="tok-number">5</span><span class="tok-punctuation">]</span><span class="tok-punctuation">)</span></span><span class="code-line"><span class="tok-identifier">doAssert</span> <span class="tok-identifier">c</span> <span class="tok-operator">==</span> <span class="tok-operator">@</span><span class="tok-punctuation">[</span><span class="tok-operator">-</span><span class="tok-number">5</span><span class="tok-punctuation">,</span> <span class="tok-number">7</span><span class="tok-punctuation">,</span> <span class="tok-number">100</span><span class="tok-punctuation">]</span></span><span class="code-line"><span class="tok-identifier">doAssert</span> <span class="tok-identifier">c</span><span class="tok-punctuation">{</span><span class="tok-number">7</span><span class="tok-punctuation">}</span> <span class="tok-operator">==</span> <span class="tok-number">1</span></span><span class="code-line"><span class="tok-identifier">doAssert</span> <span class="tok-identifier">c</span><span class="tok-operator">.</span><span class="tok-identifier">val</span><span class="tok-punctuation">(</span><span class="tok-number">2</span><span class="tok-punctuation">)</span> <span class="tok-operator">==</span> <span class="tok-number">100</span></span><span class="code-line"></span><span class="code-line"><span class="tok-identifier">c</span><span class="tok-operator">.</span><span class="tok-identifier">add</span> <span class="tok-operator">-</span><span class="tok-number">10</span></span><span class="code-line"><span class="tok-identifier">c</span><span class="tok-operator">.</span><span class="tok-identifier">build</span><span class="tok-punctuation">(</span><span class="tok-punctuation">)</span></span><span class="code-line"><span class="tok-identifier">doAssert</span> <span class="tok-identifier">c</span> <span class="tok-operator">==</span> <span class="tok-operator">@</span><span class="tok-punctuation">[</span><span class="tok-operator">-</span><span class="tok-number">10</span><span class="tok-punctuation">,</span> <span class="tok-operator">-</span><span class="tok-number">5</span><span class="tok-punctuation">,</span> <span class="tok-number">7</span><span class="tok-punctuation">,</span> <span class="tok-number">100</span><span class="tok-punctuation">]</span></span></code></pre>
 <h2 id="_3">注意</h2>
-<p>TODO: 制約、前提条件、落とし穴を記述してください。</p>
+<p>総入力長を n、異なる値の個数を u とすると、ハッシュ操作を期待 O(1) として、
+構築は <strong>期待 O(n + u log u)</strong> です。入力全体 n 個をソートする形には変えていません。
+検索は O(log u)、<code>val</code> は O(1)、結果の保存領域は O(u) です。
+構築時の一時領域は O(n + u) です。標準 HashSet は入力長 n を基準に容量を確保します。</p>
+<h2 id="api_1">新 API との違い</h2>
+<p><a href="../algorithm/coordinate_compression.html">CoordinateCompression</a> は object と公開 <code>values</code> を持ち、
+hash を使わず入力全体をソートする O(n log n) の構築を行います。
+hash を持たない順序型にも使えます。境界検索は <code>&lt;</code> のみで利用できます。</p>
+<p>両 API の型・構築法・欠損時の契約を維持するため、一方を他方の型別名にはしていません。
+legacy の検索は標準 <code>binarySearch</code> へ委譲しています。
+手動で重複を含む整列 seq を渡した場合、一致位置は必ずしも先頭ではありません。
+新 API の <code>indexOf</code> は最初の一致位置を返すため、単純な置き換えは互換になりません。</p>
+<h2 id="_4">検証</h2>
+<ul>
+<li><code>tests/test_compress_contract.nim</code></li>
+<li><code>tests/test_compress_legacy_standalone.nim</code></li>
+<li><code>tests/test_compress_header.nim</code></li>
+<li><code>tools/bench_compress.nim</code></li>
+</ul>
   </main>
 </body>
 </html>

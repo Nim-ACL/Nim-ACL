@@ -18,8 +18,8 @@
       "independent_implementation": 17
     },
     "independent_subgroups": {
-      "duplicate_kernel_candidates": 6,
-      "distinct_algorithm_feature_or_representation": 9,
+      "duplicate_kernel_candidates": 5,
+      "distinct_algorithm_feature_or_representation": 10,
       "additional_legacy_contract_audit": 2
     },
     "deletion_policy": "Preserve public import paths, exported types, callback signatures, mutation and exception contracts. Remove duplicate bodies behind tested adapters; do not delete legacy modules merely because local imports are absent.",
@@ -61,8 +61,8 @@
         "group": 5,
         "anchor_module": "src/atcoder/extra/other/compress.nim",
         "primary_classification": "independent_implementation",
-        "kernel_relationship": "duplicate_kernel_candidate",
-        "integration_priority": 2,
+        "kernel_relationship": "distinct_algorithm_feature_or_representation",
+        "integration_priority": null,
         "mixed_group": false
       },
       {
@@ -258,7 +258,8 @@
         "modules": [
           "src/atcoder/extra/other/compress.nim",
           "src/atcoder/extra/algorithm/coordinate_compression.nim"
-        ]
+        ],
+        "status": "retained_distinct_contracts_and_construction"
       },
       {
         "rank": 3,
@@ -329,7 +330,8 @@
       }
     ],
     "rle_cost": "Encoding: O(n) comparisons. Returned runs: O(r). Legacy c/n adapter additionally holds an O(r) canonical Run buffer; no performance improvement is claimed.",
-    "range_fenwick_2d_cost": "Rectangle add/sum/get: O(log H log W) backend operations, unchanged. Dense retains four (H+1)*(W+1) arrays and O(HW) initialization; sparse retains four hash tables, expected query/update time, and only touched Fenwick nodes. Body templates add no runtime storage or dispatch."
+    "range_fenwick_2d_cost": "Rectangle add/sum/get: O(log H log W) backend operations, unchanged. Dense retains four (H+1)*(W+1) arrays and O(HW) initialization; sparse retains four hash tables, expected query/update time, and only touched Fenwick nodes. Body templates add no runtime storage or dispatch.",
+    "compress_cost": "Keep hash-first legacy construction: expected O(n + u log u), only u keys sorted. Canonical remains hash-free O(n log n). Both retain O(u) result storage and O(n + u) construction workspace; std HashSet presizes its table from input n. No canonical object or whole-input sorting is introduced in legacy."
   },
   "groups": [
     {
@@ -355,9 +357,9 @@
     },
     {
       "modules": ["src/atcoder/extra/other/compress.nim", "src/atcoder/extra/algorithm/coordinate_compression.nim"],
-      "decision": "next_adapter_candidate",
-      "reason": "Share sorting/deduplication and lookups, but preserve the legacy sequence representation, variadic constructor, mutating build and missing-key assertion.",
-      "required_tests": "Legacy direct import, both import orders, empty input, multiple pools, custom ordered values, missing keys and sequence operations."
+      "decision": "retain_distinct_std_library_adapters",
+      "reason": "Legacy keeps a private seq alias, variadic pools, hash-first expected O(n + u log u) construction and std binarySearch match selection. Canonical keeps an object, hash-free O(n log n) construction and first-match lookups. Reuse std HashSet/sort/search instead of adding another core; legacy now owns its imports and materializes a new seq before swapping to avoid ORC destruction-before-read.",
+      "required_tests": "Both compilers, refc/orc, assertions on/off, direct import without std helpers, legacy header, both API import orders and all Expander modes; sequence/mutation/exception/type constraints; random and large oracles; hash and comparison operation budgets."
     },
     {
       "modules": ["src/atcoder/extra/math/multipoint_evaluation.nim", "src/atcoder/extra/math/multipoint_evaluation_backup.nim", "src/atcoder/extra/math/multipoint_evaluation_slow.nim", "src/atcoder/extra/math/subproduct_tree.nim"],

@@ -310,8 +310,20 @@ pre.nim-line-numbers .code-line::before {
 <li><code>encode</code>, <code>indexOf</code>: <code>O(log k)</code></li>
 <li><code>decode</code>: <code>O(1)</code></li>
 <li>sequence 全体の圧縮: <code>O(n log k)</code></li>
-<li>memory: <code>O(k)</code></li>
+<li>結果の保存領域: <code>O(k)</code></li>
+<li>構築時の一時領域: <code>O(n + k)</code></li>
 </ul>
+<h2 id="legacy-api">legacy API との違い</h2>
+<p><a href="../other/compress.html">legacy Compress</a> は seq 表現と複数 seq の可変長構築を持ち、
+ハッシュで重複を除いてから異なる値だけをソートします。
+構築は期待 <code>O(n + k log k)</code> です。
+この API は hash を要求せず、入力全体をソートする <code>O(n log n)</code> の構築を維持しています。
+<code>lowerBoundIndex</code> / <code>upperBoundIndex</code> は <code>&lt;</code> のみで利用できます。</p>
+<p><code>values</code> を直接変更する場合、検索には整列状態が必要です。
+重複を含む整列 <code>values</code> に対しても <code>indexOf</code> は最初の一致位置を返します。
+legacy の標準 <code>binarySearch</code> による一致位置とは契約が異なります。
+欠損時は <code>indexOf</code> が <code>-1</code>、<code>encode</code> が <code>AssertionDefect</code> です。
+<code>encode</code> と <code>decode</code> の <code>doAssert</code> は <code>--assertions:off</code> でも有効です。</p>
 <h2 id="_4">関連資料</h2>
 <ul>
 <li><a href="https://atcoder.jp/contests/practice2/tasks/practice2_b" target="_blank" rel="noopener">AtCoder Library Practice Contest B - Fenwick Tree</a> / <a href="https://atcoder.jp/contests/abc036/tasks/abc036_c" target="_blank" rel="noopener">AtCoder ABC036 C - 座圧</a></li>
