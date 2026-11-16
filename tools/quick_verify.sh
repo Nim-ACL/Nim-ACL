@@ -108,6 +108,7 @@ trap nacl_finish EXIT
     tests/test_extra_legacy_header.nim
     tests/test_extra_divutils.nim
     tests/test_extra_range_fenwick_2d_coexistence.nim
+    tests/test_range_fenwick_2d_shared.nim
     tests/test_extra_chu_liu_edmonds.nim
     tests/test_extra_ja_facades.nim
     tests/test_extra_dp_basic.nim

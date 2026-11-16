@@ -13,12 +13,12 @@
   "classification_review": {
     "scope": "Primary classification describes each group as a whole; mixed groups retain separately documented implementations. Independent public implementations do not imply unique algorithms. No equivalence claim is inferred solely from names or lexical similarity.",
     "counts": {
-      "existing_shared_core": 3,
+      "existing_shared_core": 4,
       "compatibility_wrapper": 6,
-      "independent_implementation": 18
+      "independent_implementation": 17
     },
     "independent_subgroups": {
-      "duplicate_kernel_candidates": 7,
+      "duplicate_kernel_candidates": 6,
       "distinct_algorithm_feature_or_representation": 9,
       "additional_legacy_contract_audit": 2
     },
@@ -188,9 +188,9 @@
       {
         "group": 21,
         "anchor_module": "src/atcoder/extra/structure/dense_range_fenwicktree_2d.nim",
-        "primary_classification": "independent_implementation",
-        "kernel_relationship": "duplicate_kernel_candidate",
-        "integration_priority": 1,
+        "primary_classification": "existing_shared_core",
+        "kernel_relationship": "already_shared_or_adapted",
+        "integration_priority": null,
         "mixed_group": false
       },
       {
@@ -249,7 +249,8 @@
         "modules": [
           "src/atcoder/extra/structure/dense_range_fenwicktree_2d.nim",
           "src/atcoder/extra/structure/sparse_range_fenwicktree_2d.nim"
-        ]
+        ],
+        "status": "completed"
       },
       {
         "rank": 2,
@@ -327,7 +328,8 @@
         ]
       }
     ],
-    "rle_cost": "Encoding: O(n) comparisons. Returned runs: O(r). Legacy c/n adapter additionally holds an O(r) canonical Run buffer; no performance improvement is claimed."
+    "rle_cost": "Encoding: O(n) comparisons. Returned runs: O(r). Legacy c/n adapter additionally holds an O(r) canonical Run buffer; no performance improvement is claimed.",
+    "range_fenwick_2d_cost": "Rectangle add/sum/get: O(log H log W) backend operations, unchanged. Dense retains four (H+1)*(W+1) arrays and O(HW) initialization; sparse retains four hash tables, expected query/update time, and only touched Fenwick nodes. Body templates add no runtime storage or dispatch."
   },
   "groups": [
     {
@@ -434,10 +436,10 @@
       "reason": "Export visibility, supported shapes, string/ptr handling and overload fallback differ. Macro text similarity does not establish compatibility."
     },
     {
-      "modules": ["src/atcoder/extra/structure/dense_range_fenwicktree_2d.nim", "src/atcoder/extra/structure/sparse_range_fenwicktree_2d.nim"],
-      "decision": "next_shared_internal_kernel_candidate",
-      "reason": "The four-tree rectangle-add/prefix-sum equations are duplicated; dense versus sparse storage must remain separate. Extract the arithmetic/update kernel without merging public types or include guards.",
-      "required_tests": "Existing coexistence test and both range Fenwick contracts, both import orders, empty boundaries, random grid oracle and custom additive/scalar types."
+      "modules": ["src/atcoder/extra/structure/dense_range_fenwicktree_2d.nim", "src/atcoder/extra/structure/sparse_range_fenwicktree_2d.nim", "src/atcoder/extra/structure/internal/range_fenwicktree_2d_core.nim"],
+      "decision": "already_shared",
+      "reason": "Private body templates share corner coefficients, prefix inclusion-exclusion and range checks. Public types, signatures, constructors, dense arrays and sparse hash-table traversal remain separate; generic operator and arithmetic evaluation order are preserved.",
+      "required_tests": "Both Nim versions; both import orders in direct/plain/embed/bundle; existing dense/sparse contracts and independent 18432-query sparse oracle; boundary/random/large-domain/scalar contracts; baseline performance comparison."
     },
     {
       "modules": ["src/atcoder/convolution.nim", "src/atcoder/extra/math/convolution_universal.nim"],

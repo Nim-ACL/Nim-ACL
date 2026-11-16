@@ -55,6 +55,12 @@ CASES = {
         ("tests/test_run_length_compatibility.nim", False, True),
         ("tests/test_run_length_compatibility.nim", True, True),
     ],
+    "range_fenwick": [
+        ("tests/test_range_fenwick_2d_shared.nim", False, True),
+        ("tests/test_range_fenwick_2d_shared.nim", True, True),
+        ("tests/extra/structure/dense_range_fenwicktree_2d_contract.nim", False, False),
+        ("tests/extra/structure/sparse_range_fenwicktree_2d_contract.nim", False, False),
+    ],
 }
 
 

@@ -258,6 +258,54 @@ pre.nim-line-numbers .code-line::before {
 </code></pre>
 <h2 id="2d-api">2D API 規約</h2>
 <p>二次元サイズは <code>(height, width)</code>、添字・範囲は <code>(row, col)</code> の順で扱います。</p>
+<h2 id="dense">dense 版との共通処理と格納方式</h2>
+<p>両版とも <code>initDenseRangeFenwickTree2D[T]</code> / <code>initSparseRangeFenwickTree2D[T]</code>
+で構築し、<code>add(rowBegin, rowEnd, colBegin, colEnd, delta)</code>、
+<code>sum(rowBegin, rowEnd, colBegin, colEnd)</code>、<code>get(row, col)</code> を使います。
+矩形は半開区間です。空範囲への加算は何もせず、空範囲の和は <code>T(0)</code> です。
+公開型は別々で、相互変換や型の別名化は行いません。</p>
+<table>
+<thead>
+<tr>
+<th>特性</th>
+<th>dense 版</th>
+<th>sparse 版</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>内部格納</td>
+<td>二次元配列 4 本</td>
+<td>ハッシュテーブル 4 個</td>
+</tr>
+<tr>
+<td>初期化</td>
+<td>O((H+1)(W+1))</td>
+<td>O(1)</td>
+</tr>
+<tr>
+<td>矩形加算・矩形和・一点取得</td>
+<td>O(log(H+1) log(W+1))</td>
+<td>期待 O(log(H+1) log(W+1))</td>
+</tr>
+<tr>
+<td>メモリ</td>
+<td>4(H+1)(W+1) 個の T と行管理領域</td>
+<td>更新で触れた内部節点分。ハッシュ管理領域を含む</td>
+</tr>
+</tbody>
+</table>
+<p>表の対数計算量は H, W &gt; 0 の場合です。空範囲の操作は O(1) です。</p>
+<p>sparse 版の節点数は、矩形更新回数を k とすると
+O(min(HW, k log(H+1) log(W+1))) です。読み取りでは節点を追加しません。
+格子全体を使う場合は dense 版がハッシュの費用を避けられます。
+巨大な座標領域で更新箇所が少ない場合は sparse 版が適しています。
+sparse 版は <code>high(int)</code> に近い添字での安全な節点移動も維持しています。</p>
+<p><code>internal/range_fenwicktree_2d_core.nim</code> のテンプレートで、四隅の係数、
+prefix 和の数式、範囲検査だけを共通化しています。構築処理、格納方式、
+Fenwick 木の節点移動は各バックエンドに残しています。
+テンプレートは既存 proc の本体へ展開され、追加の作業バッファや実行時の呼び出し層は作りません。
+数値型 T の演算順序と変換順序も従来どおりです。共通化による速度向上は目的としていません。</p>
 <h2 id="api">公開 API</h2>
 <table>
 <thead>
@@ -271,27 +319,27 @@ pre.nim-line-numbers .code-line::before {
 <tr>
 <td><code>type</code></td>
 <td><code>SparseRangeFenwickTree2D</code></td>
-<td style="text-align: right;">7</td>
+<td style="text-align: right;">8</td>
 </tr>
 <tr>
 <td><code>proc</code></td>
 <td><code>initSparseRangeFenwickTree2D</code></td>
-<td style="text-align: right;">15</td>
+<td style="text-align: right;">16</td>
 </tr>
 <tr>
 <td><code>proc</code></td>
 <td><code>add</code></td>
-<td style="text-align: right;">132</td>
+<td style="text-align: right;">65</td>
 </tr>
 <tr>
 <td><code>proc</code></td>
 <td><code>sum</code></td>
-<td style="text-align: right;">177</td>
+<td style="text-align: right;">75</td>
 </tr>
 <tr>
 <td><code>proc</code></td>
 <td><code>get</code></td>
-<td style="text-align: right;">215</td>
+<td style="text-align: right;">84</td>
 </tr>
 </tbody>
 </table>
@@ -299,6 +347,8 @@ pre.nim-line-numbers .code-line::before {
 <p>関連する tracked test / contract:</p>
 <ul>
 <li><code>tests/extra/structure/sparse_range_fenwicktree_2d_contract.nim</code></li>
+<li><code>tests/test_range_fenwick_2d_shared.nim</code></li>
+<li><code>tests/test_extra_range_fenwick_2d_coexistence.nim</code></li>
 </ul>
 <h2 id="_3">ソース</h2>
 <ul>
