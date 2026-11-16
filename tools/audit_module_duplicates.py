@@ -71,6 +71,17 @@ def main():
         for a, b in itertools.combinations(sorted(paths), 2):
             pairs[a, b] += 1
     review = json.loads((ROOT / "tools/module_consolidation_review.json").read_text())
+    classification = review.get("classification_review")
+    if classification:
+        entries = classification["groups"]
+        assert len(entries) == len(review["groups"])
+        assert [entry["group"] for entry in entries] == list(range(1, len(entries) + 1))
+        for entry, group in zip(entries, review["groups"]):
+            assert entry["anchor_module"] == group["modules"][0]
+        counts = Counter(entry["primary_classification"] for entry in entries)
+        assert dict(counts) == classification["counts"]
+        assert counts["independent_implementation"] == sum(
+            classification["independent_subgroups"].values())
     for group in review["groups"]:
         for module in group["modules"]:
             assert module in names, f"review points to a missing module: {module}"

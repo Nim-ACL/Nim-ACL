@@ -5,9 +5,330 @@
       "component": "expander embed mode",
       "reproduction": "tests/test_extra_monoid.nim has imports nested in a when block; the embed ImportExpand call is emitted at column zero and the following indented proc fails parsing on both required Nim versions.",
       "baseline": "expander.py, test_extra_monoid.nim and the restored monoid.nim are byte-identical to HEAD. Direct, plain and bundle modes pass; non-conditional public-contract fixtures pass all four modes.",
-      "action": "Separate expander regression/fix before extending embed coverage to conditional-import inputs; do not change the monoid API to work around it."
+      "action": "Resolved in the isolated Expander change: preserve import-site indentation, branch-local definition sets, import-once guards and every embed provenance variant.",
+      "status": "resolved",
+      "regression_tests": ["tests/test_expander_conditional_imports.py", "tests/test_expander_submission.py", "tests/test_extra_monoid.nim"]
     }
   ],
+  "classification_review": {
+    "scope": "Primary classification describes each group as a whole; mixed groups retain separately documented implementations. Independent public implementations do not imply unique algorithms. No equivalence claim is inferred solely from names or lexical similarity.",
+    "counts": {
+      "existing_shared_core": 3,
+      "compatibility_wrapper": 6,
+      "independent_implementation": 18
+    },
+    "independent_subgroups": {
+      "duplicate_kernel_candidates": 7,
+      "distinct_algorithm_feature_or_representation": 9,
+      "additional_legacy_contract_audit": 2
+    },
+    "deletion_policy": "Preserve public import paths, exported types, callback signatures, mutation and exception contracts. Remove duplicate bodies behind tested adapters; do not delete legacy modules merely because local imports are absent.",
+    "evidence_level": "Manual source/API triage and lexical inventory; future replacements still require the per-group differential and compatibility tests.",
+    "groups": [
+      {
+        "group": 1,
+        "anchor_module": "src/atcoder/extra/algorithm/mo.nim",
+        "primary_classification": "existing_shared_core",
+        "kernel_relationship": "already_shared_or_adapted",
+        "integration_priority": null,
+        "mixed_group": false
+      },
+      {
+        "group": 2,
+        "anchor_module": "src/atcoder/extra/string/kmp.nim",
+        "primary_classification": "compatibility_wrapper",
+        "kernel_relationship": "already_shared_or_adapted",
+        "integration_priority": null,
+        "mixed_group": false
+      },
+      {
+        "group": 3,
+        "anchor_module": "src/atcoder/extra/graph/lowlink.nim",
+        "primary_classification": "existing_shared_core",
+        "kernel_relationship": "already_shared_or_adapted",
+        "integration_priority": null,
+        "mixed_group": false
+      },
+      {
+        "group": 4,
+        "anchor_module": "src/atcoder/extra/algorithm/run_length_encoding.nim",
+        "primary_classification": "compatibility_wrapper",
+        "kernel_relationship": "already_shared_or_adapted",
+        "integration_priority": null,
+        "mixed_group": false
+      },
+      {
+        "group": 5,
+        "anchor_module": "src/atcoder/extra/other/compress.nim",
+        "primary_classification": "independent_implementation",
+        "kernel_relationship": "duplicate_kernel_candidate",
+        "integration_priority": 2,
+        "mixed_group": false
+      },
+      {
+        "group": 6,
+        "anchor_module": "src/atcoder/extra/math/multipoint_evaluation.nim",
+        "primary_classification": "independent_implementation",
+        "kernel_relationship": "distinct_algorithm_feature_or_representation",
+        "integration_priority": 4,
+        "mixed_group": false
+      },
+      {
+        "group": 7,
+        "anchor_module": "src/atcoder/extra/math/eratosthenes.nim",
+        "primary_classification": "independent_implementation",
+        "kernel_relationship": "distinct_algorithm_feature_or_representation",
+        "integration_priority": null,
+        "mixed_group": false
+      },
+      {
+        "group": 8,
+        "anchor_module": "src/atcoder/extra/string/suffix_automaton.nim",
+        "primary_classification": "independent_implementation",
+        "kernel_relationship": "duplicate_kernel_candidate",
+        "integration_priority": null,
+        "mixed_group": false
+      },
+      {
+        "group": 9,
+        "anchor_module": "src/atcoder/extra/string/rolling_hash.nim",
+        "primary_classification": "independent_implementation",
+        "kernel_relationship": "duplicate_kernel_candidate",
+        "integration_priority": 3,
+        "mixed_group": false
+      },
+      {
+        "group": 10,
+        "anchor_module": "src/atcoder/extra/graph/graph_template.nim",
+        "primary_classification": "independent_implementation",
+        "kernel_relationship": "distinct_algorithm_feature_or_representation",
+        "integration_priority": null,
+        "mixed_group": false
+      },
+      {
+        "group": 11,
+        "anchor_module": "src/atcoder/extra/tree/rerooting.nim",
+        "primary_classification": "independent_implementation",
+        "kernel_relationship": "duplicate_kernel_candidate",
+        "integration_priority": 7,
+        "mixed_group": false
+      },
+      {
+        "group": 12,
+        "anchor_module": "src/atcoder/extra/structure/segtree_2d.nim",
+        "primary_classification": "compatibility_wrapper",
+        "kernel_relationship": "already_shared_or_adapted",
+        "integration_priority": 8,
+        "mixed_group": true
+      },
+      {
+        "group": 13,
+        "anchor_module": "src/atcoder/extra/structure/universal_segtree.nim",
+        "primary_classification": "independent_implementation",
+        "kernel_relationship": "distinct_algorithm_feature_or_representation",
+        "integration_priority": null,
+        "mixed_group": false
+      },
+      {
+        "group": 14,
+        "anchor_module": "src/atcoder/extra/structure/set_map.nim",
+        "primary_classification": "independent_implementation",
+        "kernel_relationship": "distinct_algorithm_feature_or_representation",
+        "integration_priority": null,
+        "mixed_group": true
+      },
+      {
+        "group": 15,
+        "anchor_module": "src/atcoder/extra/structure/sparse_segtree_2d.nim",
+        "primary_classification": "existing_shared_core",
+        "kernel_relationship": "already_shared_or_adapted",
+        "integration_priority": null,
+        "mixed_group": true
+      },
+      {
+        "group": 16,
+        "anchor_module": "src/atcoder/extra/math/int128.nim",
+        "primary_classification": "independent_implementation",
+        "kernel_relationship": "distinct_algorithm_feature_or_representation",
+        "integration_priority": null,
+        "mixed_group": true
+      },
+      {
+        "group": 17,
+        "anchor_module": "src/atcoder/extra/dp/divide_and_conquer_optimization.nim",
+        "primary_classification": "compatibility_wrapper",
+        "kernel_relationship": "already_shared_or_adapted",
+        "integration_priority": null,
+        "mixed_group": true
+      },
+      {
+        "group": 18,
+        "anchor_module": "src/atcoder/extra/graph/minimum_arborescence.nim",
+        "primary_classification": "compatibility_wrapper",
+        "kernel_relationship": "already_shared_or_adapted",
+        "integration_priority": null,
+        "mixed_group": false
+      },
+      {
+        "group": 19,
+        "anchor_module": "src/atcoder/extra/math/exp_old.nim",
+        "primary_classification": "independent_implementation",
+        "kernel_relationship": "unverified_legacy_contract",
+        "integration_priority": null,
+        "mixed_group": false
+      },
+      {
+        "group": 20,
+        "anchor_module": "src/atcoder/extra/other/tuple_index.nim",
+        "primary_classification": "independent_implementation",
+        "kernel_relationship": "unverified_legacy_contract",
+        "integration_priority": 9,
+        "mixed_group": false
+      },
+      {
+        "group": 21,
+        "anchor_module": "src/atcoder/extra/structure/dense_range_fenwicktree_2d.nim",
+        "primary_classification": "independent_implementation",
+        "kernel_relationship": "duplicate_kernel_candidate",
+        "integration_priority": 1,
+        "mixed_group": false
+      },
+      {
+        "group": 22,
+        "anchor_module": "src/atcoder/convolution.nim",
+        "primary_classification": "independent_implementation",
+        "kernel_relationship": "duplicate_kernel_candidate",
+        "integration_priority": 6,
+        "mixed_group": false
+      },
+      {
+        "group": 23,
+        "anchor_module": "src/atcoder/mincostflow.nim",
+        "primary_classification": "independent_implementation",
+        "kernel_relationship": "duplicate_kernel_candidate",
+        "integration_priority": 5,
+        "mixed_group": false
+      },
+      {
+        "group": 24,
+        "anchor_module": "src/atcoder/extra/structure/offline_rectangle_add_point_get.nim",
+        "primary_classification": "independent_implementation",
+        "kernel_relationship": "distinct_algorithm_feature_or_representation",
+        "integration_priority": 10,
+        "mixed_group": false
+      },
+      {
+        "group": 25,
+        "anchor_module": "src/atcoder/extra/other/decimal.nim",
+        "primary_classification": "independent_implementation",
+        "kernel_relationship": "distinct_algorithm_feature_or_representation",
+        "integration_priority": null,
+        "mixed_group": false
+      },
+      {
+        "group": 26,
+        "anchor_module": "src/atcoder/extra/structure/old_randomized_binary_search_tree.nim",
+        "primary_classification": "independent_implementation",
+        "kernel_relationship": "distinct_algorithm_feature_or_representation",
+        "integration_priority": null,
+        "mixed_group": false
+      },
+      {
+        "group": 27,
+        "anchor_module": "src/atcoder/extra/other/algorithmutils.nim",
+        "primary_classification": "compatibility_wrapper",
+        "kernel_relationship": "already_shared_or_adapted",
+        "integration_priority": null,
+        "mixed_group": true
+      }
+    ],
+    "priority_order": [
+      {
+        "rank": 1,
+        "group": 21,
+        "modules": [
+          "src/atcoder/extra/structure/dense_range_fenwicktree_2d.nim",
+          "src/atcoder/extra/structure/sparse_range_fenwicktree_2d.nim"
+        ]
+      },
+      {
+        "rank": 2,
+        "group": 5,
+        "modules": [
+          "src/atcoder/extra/other/compress.nim",
+          "src/atcoder/extra/algorithm/coordinate_compression.nim"
+        ]
+      },
+      {
+        "rank": 3,
+        "group": 9,
+        "modules": [
+          "src/atcoder/extra/string/rolling_hash.nim",
+          "src/atcoder/extra/string/rolling_hash_old.nim"
+        ]
+      },
+      {
+        "rank": 4,
+        "group": 6,
+        "modules": [
+          "src/atcoder/extra/math/multipoint_evaluation.nim",
+          "src/atcoder/extra/math/multipoint_evaluation_backup.nim",
+          "src/atcoder/extra/math/multipoint_evaluation_slow.nim",
+          "src/atcoder/extra/math/subproduct_tree.nim"
+        ]
+      },
+      {
+        "rank": 5,
+        "group": 23,
+        "modules": [
+          "src/atcoder/mincostflow.nim",
+          "src/atcoder/extra/graph/mincostflow_generalized.nim"
+        ]
+      },
+      {
+        "rank": 6,
+        "group": 22,
+        "modules": [
+          "src/atcoder/convolution.nim",
+          "src/atcoder/extra/math/convolution_universal.nim"
+        ]
+      },
+      {
+        "rank": 7,
+        "group": 11,
+        "modules": [
+          "src/atcoder/extra/tree/rerooting.nim",
+          "src/atcoder/extra/graph/rerooting_dp.nim"
+        ]
+      },
+      {
+        "rank": 8,
+        "group": 12,
+        "modules": [
+          "src/atcoder/extra/structure/segtree_2d.nim",
+          "src/atcoder/extra/structure/segtree_2d_backup.nim",
+          "src/atcoder/extra/structure/compressed_segtree_2d.nim"
+        ]
+      },
+      {
+        "rank": 9,
+        "group": 20,
+        "modules": [
+          "src/atcoder/extra/other/tuple_index.nim",
+          "src/atcoder/extra/other/tuple_indexing.nim"
+        ]
+      },
+      {
+        "rank": 10,
+        "group": 24,
+        "modules": [
+          "src/atcoder/extra/structure/offline_rectangle_add_point_get.nim",
+          "src/atcoder/extra/structure/offline_rectangle_add_rectangle_sum.nim"
+        ]
+      }
+    ],
+    "rle_cost": "Encoding: O(n) comparisons. Returned runs: O(r). Legacy c/n adapter additionally holds an O(r) canonical Run buffer; no performance improvement is claimed."
+  },
   "groups": [
     {
       "modules": ["src/atcoder/extra/algorithm/mo.nim", "src/atcoder/extra/structure/mo.nim", "src/atcoder/extra/algorithm/internal/mo_core.nim"],
