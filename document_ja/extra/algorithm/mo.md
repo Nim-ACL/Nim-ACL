@@ -59,22 +59,22 @@ import atcoder/extra/algorithm/mo
 
 let a = @[1, 2, 1, 3, 2]
 
-var mo = initMo(a.len)
+var queries = initMo(a.len)
 
-discard mo.addQuery(0, 3)
-discard mo.addQuery(1, 5)
+discard queries.addQuery(0, 3)
+discard queries.addQuery(1, 5)
 
 var
   freq = initTable[int, int]()
-  distinct = 0
-  ans = newSeq[int](mo.len)
+  distinctCount = 0
+  ans = newSeq[int](queries.len)
 
 proc add(index: int) =
   let x = a[index]
   let old = freq.getOrDefault(x, 0)
 
   if old == 0:
-    distinct.inc
+    distinctCount.inc
 
   freq[x] = old + 1
 
@@ -84,14 +84,14 @@ proc remove(index: int) =
 
   if old == 1:
     freq.del(x)
-    distinct.dec
+    distinctCount.dec
   else:
     freq[x] = old - 1
 
 proc save(id: int) =
-  ans[id] = distinct
+  ans[id] = distinctCount
 
-mo.run(add, remove, save)
+queries.run(add, remove, save)
 ~~~
 
 ## 計算量
@@ -99,10 +99,18 @@ mo.run(add, remove, save)
 通常の block size では、おおよそ
 
 ```text
-O((n + q) sqrt(n) * add/remove のコスト)
+O(q log q + (q B + n^2 / B) * add/remove のコスト)
+B = block size（既定値は max(1, floor(sqrt(n)))）
 ```
 
-です。
+です。query 保存に `O(q)`、並べ替え用に `O(q)` の領域を使います。
+
+## 旧APIとの関係
+
+`atcoder/extra/structure/mo` は同じ内部コアへ委譲する互換入口です。
+旧 `initMo(N, Q)` の第2引数はquery数、新APIの第2引数はblock sizeです。
+両方をimportする場合は `initMo(N = n, Q = q)` または
+`initMo(n, blockSize = b)` と名前付き引数で区別してください。
 
 ## 注意
 

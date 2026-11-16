@@ -20,7 +20,7 @@ test "Mo distinct values":
 
   var
     frequency = initTable[int, int]()
-    distinct = 0
+    distinctCount = 0
     answer = newSeq[int](mo.len)
 
   proc add(index: int) =
@@ -28,7 +28,7 @@ test "Mo distinct values":
     let old = frequency.getOrDefault(x, 0)
 
     if old == 0:
-      distinct.inc
+      distinctCount.inc
 
     frequency[x] = old + 1
 
@@ -38,12 +38,12 @@ test "Mo distinct values":
 
     if old == 1:
       frequency.del(x)
-      distinct.dec
+      distinctCount.dec
     else:
       frequency[x] = old - 1
 
   proc save(queryId: int) =
-    answer[queryId] = distinct
+    answer[queryId] = distinctCount
 
   mo.run(add, remove, save)
 
@@ -101,3 +101,17 @@ test "Mo ordering preserves query ids":
   ids.sort()
 
   check ids == toSeq(0 ..< 20)
+
+test "Mo constructor remains usable as a procedure value":
+  let constructor: proc(n, blockSize: int): Mo = initMo
+  let queries: Mo = constructor(0, 0)
+  check queries.len == 0
+
+test "Mo public object construction remains supported":
+  let queries = Mo(n: 3, blockSize: 1,
+    queries: @[MoQuery(l: 0, r: 3, id: 0)])
+  var total = 0
+  proc add(i: int) = total += i + 1
+  proc remove(i: int) = total -= i + 1
+  proc save(id: int) = check id == 0 and total == 6
+  queries.run(add, remove, save)
