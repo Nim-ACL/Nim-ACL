@@ -48,6 +48,71 @@ def indent_level(line):
     return len(line)
 
 
+def nim_line_contexts(lines):
+    """Track multiline tokens before adding indentation or resolving imports."""
+    triple = False
+    comment = None
+    nesting = 0
+    contexts = []
+    for line in lines:
+        contexts.append((triple, comment is not None))
+        i = 0
+        while i < len(line):
+            if comment:
+                opening, closing = comment
+                if line.startswith(opening, i):
+                    nesting += 1
+                    i += len(opening)
+                elif line.startswith(closing, i):
+                    i += len(closing)
+                    nesting -= 1
+                    if nesting == 0:
+                        comment = None
+                else:
+                    i += 1
+            elif triple:
+                # Nim ends at the last three quotes in a run of >=3 quotes.
+                if line.startswith('"""', i) and not line.startswith('""""', i):
+                    triple = False
+                    i += 3
+                else:
+                    i += 1
+            elif line.startswith('##[', i) or line.startswith('#[', i):
+                comment = ('##[', ']##') if line.startswith('##[', i) else ('#[', ']#')
+                nesting = 1
+                i += len(comment[0])
+            elif line[i] == '#':
+                break
+            elif line.startswith('"""', i):
+                triple = True
+                i += 3
+            elif line[i] == '"' or (line[i] == "'" and
+                                      (i == 0 or not (line[i-1].isalnum() or line[i-1] == '_'))):
+                quote = line[i]
+                raw = quote == '"' and i > 0 and (line[i-1].isalnum() or line[i-1] == '_')
+                i += 1
+                while i < len(line):
+                    if not raw and line[i] == '\\':
+                        i += 2
+                    elif raw and line.startswith('""', i):
+                        i += 2
+                    elif line[i] == quote:
+                        i += 1
+                        break
+                    else:
+                        i += 1
+            else:
+                i += 1
+    return contexts
+
+
+def indent_source(lines, prefix):
+    # Leading whitespace on a continuation line belongs to the literal itself,
+    # including the line containing its closing quotes. Never change its value.
+    return [line if context[0] else prefix + line
+            for line, context in zip(lines, nim_line_contexts(lines))]
+
+
 def split_import_items(s):
     items = []
     cur = []
@@ -165,8 +230,8 @@ def write_bundle_module(relpath, lines, bundle_tmp):
 
 def module_guard_indent(source):
     """Recognize a whole-module when/const guard, not an arbitrary condition."""
-    code = [line for line in source
-            if line.strip() and not line.lstrip().startswith("#")]
+    code = [line for line, context in zip(source, nim_line_contexts(source))
+            if not any(context) and line.strip() and not line.lstrip().startswith("#")]
     if len(code) < 2:
         return None
     match = re.fullmatch(r"when not declared\s*\(?\s*([A-Za-z_][A-Za-z_0-9]*)\s*\)?\s*:",
@@ -189,7 +254,7 @@ def import_once(fname, expanded, lib_root, local_root):
         return expanded
     marker = "NaclExpandedImport_" + hashlib.sha256(fname.encode("utf-8")).hexdigest()[:16]
     return [f"when not declared({marker}):", f"  const {marker} = true",
-            *("  " + line for line in expanded)]
+            *indent_source(expanded, "  ")]
 
 
 def record_embed_text(fname, text):
@@ -220,6 +285,7 @@ def read_source(path, prefix, defined, lib_root, local_root,
     # incorrectly remove exports of unrelated, still-imported modules.
     inlined_imported_modules = set()
     source = read_module_text(path, lib_root, local_root).splitlines()
+    contexts = nim_line_contexts(source)
     guard_indent = module_guard_indent(source) if depth > 0 else None
     scopes = [(0, defined)]
 
@@ -229,6 +295,12 @@ def read_source(path, prefix, defined, lib_root, local_root,
     while i < len(source):
 
         line = source[i]
+        if any(contexts[i]):
+            # An import/export/when-looking line inside a string or comment is
+            # text, not Nim source to resolve or a new lexical scope.
+            result.append(line)
+            i += 1
+            continue
         spaces = indent_level(line)
         if mode != "bundle" and line.strip() and not line.lstrip().startswith("#"):
             while scopes[-1][0] > spaces:
@@ -344,7 +416,7 @@ def read_source(path, prefix, defined, lib_root, local_root,
                         )
 
                     else:
-                        result.extend((" " * spaces) + ln for ln in expanded)
+                        result.extend(indent_source(expanded, " " * spaces))
 
             else:
                 result.append(" " * spaces + f"{keyword} {item}")
