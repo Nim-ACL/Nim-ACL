@@ -98,6 +98,7 @@ trap nacl_finish EXIT
   tests=(
     tests/test_extra_fps.nim
     tests/test_extra_formal_power_series.nim
+    tests/test_extra_multipoint_evaluation_backup.nim
     tests/test_extra_monoid.nim
     tests/test_commutative_monoid_public_contract.nim
     tests/test_extra_graph_template.nim

@@ -33,7 +33,10 @@ when not declared ATCODER_EXTRA_MATH_MULTIPOINT_EVALUATION_BACKUP_HPP:
     let fs = f.len
     var root = buf[1]
     root = root.ifft(mint)
-    root.add(mint.init(1))
+    # A singleton leaf already contains its leading one; only internal roots
+    # store that coefficient implicitly after pointwise multiplication.
+    if N > 1:
+      root.add(mint.init(1))
     root.reverse
     root = root.inv(fs).rev() * f
     #root.erase(begin(root), begin(root) + fs - 1);
