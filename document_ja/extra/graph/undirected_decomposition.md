@@ -49,6 +49,21 @@ proc addEdge(g: var UndirectedGraph, u, v: int): int
 
 parallel edge は使用できます。self-loop は使用できません。
 
+## Low-linkのみを取得する低水準API
+
+~~~nim
+proc lowLinkUndirected(
+  g: UndirectedGraph,
+  buildComponents: static bool = false
+): BiconnectedComponentsResult
+~~~
+
+既定では`ord`・`low`・`articulation`・`bridges`を求めます。
+`articulation`と`bridges`はDFSの完了順で、ソート順は保証しません。
+component用の3フィールドは空列です。`buildComponents = true`では
+全componentを構築し、関節点と橋をソートします。通常の全分解には
+`biconnectedComponents`を使えます。DFSは明示スタックによる反復実装です。
+
 ## Biconnected Components
 
 ~~~nim
@@ -153,7 +168,7 @@ let blockCut = g.blockCutTree(bcc)
 - disconnected graph にも対応し、結果は forest になります。
 - parallel edge に対応します。
 - self-loop は使用できません。
-- DFS 部分は再帰実装です。極端に深い path graph では call stack に注意してください。
+- DFSは明示スタックによる反復実装です。深いpath graphでもDFSの再帰呼び出しは使いません。
 
 ## 関連資料・他言語ライブラリ
 

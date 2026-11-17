@@ -37,10 +37,18 @@ Visual Studioがインストールされているならば、以下のような�
 
 ## 他のジャッジへの提出方法
 
-`expander.py`というスクリプト(python3.5 or later)を用意しています。
-`python3 expander.py main.cpp`と実行すると`combined.cpp`が生成され、これは他のオンラインジャッジに提出できる形になっています。
+Nim-ACLの`expander.py`はNimの入力`main.nim`から`combined.nim`を生成します。
+Python 3.8以降（lzmaを含む）とGitを使います。既定のモードは`bundle`で、
+`--mode plain`と`--mode embed`も選べます。生成物は`nim cpp`でコンパイルします。
+bundle/embedでは、コンパイラを実行する環境にもPythonが必要です。
 
-テストはしていますが、サポート保証外です。
+`--lib`にはNim-ACLの`src`を含むディレクトリ、`--source-ref`には内容が一致する
+Git参照を指定します。ローカル検証では`--source-ref HEAD --preview`を使えますが、
+提出用にはライブラリとbootstrapに一致する公開済み参照の確認が必要です。
+全オプションは`python3 expander.py --help`、使用例は[README](https://github.com/Nim-ACL/Nim-ACL#expander)を参照してください。
+
+この付録のC++向け説明は上流AC Libraryの参考情報です。Nim-ACLのインストールや
+提出手順として`main.cpp`・`combined.cpp`を使用するものではありません。
 
 ## ドキュメントの表記法 / 明記されていないこと
 

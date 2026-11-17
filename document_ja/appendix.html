@@ -101,9 +101,16 @@
 </ul>
 <p>となるように配置してください。</p>
 <h2 id="_3">他のジャッジへの提出方法</h2>
-<p><code>expander.py</code>というスクリプト(python3.5 or later)を用意しています。
-<code>python3 expander.py main.cpp</code>と実行すると<code>combined.cpp</code>が生成され、これは他のオンラインジャッジに提出できる形になっています。</p>
-<p>テストはしていますが、サポート保証外です。</p>
+<p>Nim-ACLの<code>expander.py</code>はNimの入力<code>main.nim</code>から<code>combined.nim</code>を生成します。
+Python 3.8以降（lzmaを含む）とGitを使います。既定のモードは<code>bundle</code>で、
+<code>--mode plain</code>と<code>--mode embed</code>も選べます。生成物は<code>nim cpp</code>でコンパイルします。
+bundle/embedでは、コンパイラを実行する環境にもPythonが必要です。</p>
+<p><code>--lib</code>にはNim-ACLの<code>src</code>を含むディレクトリ、<code>--source-ref</code>には内容が一致する
+Git参照を指定します。ローカル検証では<code>--source-ref HEAD --preview</code>を使えますが、
+提出用にはライブラリとbootstrapに一致する公開済み参照の確認が必要です。
+全オプションは<code>python3 expander.py --help</code>、使用例は<a href="https://github.com/Nim-ACL/Nim-ACL#expander" target="_blank" rel="noopener">README</a>を参照してください。</p>
+<p>この付録のC++向け説明は上流AC Libraryの参考情報です。Nim-ACLのインストールや
+提出手順として<code>main.cpp</code>・<code>combined.cpp</code>を使用するものではありません。</p>
 <h2 id="_4">ドキュメントの表記法 / 明記されていないこと</h2>
 <h3 id="_5">💻マーク</h3>
 <p>C++初心者には難しいかもしれない機能を表すマークです。AC Libraryは、このマークの付いた箇所を無視してもアルゴリズム的に困らないように設計されています。modintなどが該当します。</p>

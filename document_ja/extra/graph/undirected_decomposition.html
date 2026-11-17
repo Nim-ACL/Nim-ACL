@@ -283,6 +283,17 @@ pre.nim-line-numbers .code-line::before {
 </code></pre>
 <p><code>addEdge</code> は edge id を返します。</p>
 <p>parallel edge は使用できます。self-loop は使用できません。</p>
+<h2 id="low-linkapi">Low-linkのみを取得する低水準API</h2>
+<pre class="nim-code nim-acl-highlighted"><code class="language-nim nim-acl-highlighted"><span class="tok-keyword">proc</span> <span class="tok-identifier">lowLinkUndirected</span><span class="tok-punctuation">(</span>
+  <span class="tok-identifier">g</span><span class="tok-punctuation">:</span> <span class="tok-identifier">UndirectedGraph</span><span class="tok-punctuation">,</span>
+  <span class="tok-identifier">buildComponents</span><span class="tok-punctuation">:</span> <span class="tok-keyword">static</span> <span class="tok-identifier">bool</span> <span class="tok-operator">=</span> <span class="tok-identifier">false</span>
+<span class="tok-punctuation">)</span><span class="tok-punctuation">:</span> <span class="tok-identifier">BiconnectedComponentsResult</span>
+</code></pre>
+<p>既定では<code>ord</code>・<code>low</code>・<code>articulation</code>・<code>bridges</code>を求めます。
+<code>articulation</code>と<code>bridges</code>はDFSの完了順で、ソート順は保証しません。
+component用の3フィールドは空列です。<code>buildComponents = true</code>では
+全componentを構築し、関節点と橋をソートします。通常の全分解には
+<code>biconnectedComponents</code>を使えます。DFSは明示スタックによる反復実装です。</p>
 <h2 id="biconnected-components">Biconnected Components</h2>
 <pre class="nim-code nim-acl-highlighted"><code class="language-nim nim-acl-highlighted"><span class="tok-keyword">proc</span> <span class="tok-identifier">biconnectedComponents</span><span class="tok-punctuation">(</span>
   <span class="tok-identifier">g</span><span class="tok-punctuation">:</span> <span class="tok-identifier">UndirectedGraph</span>
@@ -346,7 +357,7 @@ pre.nim-line-numbers .code-line::before {
 <li>disconnected graph にも対応し、結果は forest になります。</li>
 <li>parallel edge に対応します。</li>
 <li>self-loop は使用できません。</li>
-<li>DFS 部分は再帰実装です。極端に深い path graph では call stack に注意してください。</li>
+<li>DFSは明示スタックによる反復実装です。深いpath graphでもDFSの再帰呼び出しは使いません。</li>
 </ul>
 <h2 id="_5">関連資料・他言語ライブラリ</h2>
 <ul>

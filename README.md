@@ -4,15 +4,34 @@ ACLで実装されているものはexpander含めてすべてNimに変換して
 一部、Nim向けに使いやすくなるような仕様も追加しました。
 
 ## expander
-Nim-ACLによるimport, includeをすべて展開します。コマンドは本家ACLのものと同じです。
-Nim-ACLはatcoderのジャッジ環境では呼び出せませんがexpanderで展開することで、atcoderでもコンパイル可能なコードを生成することが可能です。
-online-judge-tools, atcoder-toolsなどの自動提出機能のあるツールと合わせて展開と提出を同時に行うようにすると便利です。
-### expanderのオプション
+Nim-ACLの`import`・`include`を展開し、`combined.nim`を生成します。
+`nim cpp`でコンパイルしてください。Python 3.8以降（lzmaを含む）とGitが必要です。
+
+### モードとオプション
+- `--mode bundle`（既定）: moduleの境界を保って格納し、コンパイル時に復元します。
+- `--mode plain`: 参照moduleをその場へ展開します。
+- `--mode embed`: 展開したmoduleを圧縮して格納します。
+- `--lib LIB`: `src`を含むNim-ACLのディレクトリを指定します。
+- `--output FILE`: 出力先を指定します。既定は`combined.nim`です。
+- `--source-ref REF`: ライブラリの参照元Git commitを指定します。既定はローカルの`origin/master`です。
+- `--tool-source-ref REF`: 圧縮出力のbootstrapに使うexpander本体の参照元を指定します。
+- `--preview`: 未公開のbootstrapを使ったローカル検証用です。ライブラリの内容一致検査は省略しません。
+
+`--compress`はembed、`--directory`はbundleを選ぶ互換オプションです。
+全オプションは`python3 expander.py --help`で確認できます。
+
+Nim-ACLのリポジトリ内で行うローカル検証例（提出用ではありません）:
+
+```bash
+python3 expander.py main.nim --lib . --source-ref HEAD --preview --output combined.nim
+nim cpp -d:release --opt:speed combined.nim
 ```
-usage: expander.py [-h] [-c] [-s] [--lib LIB] source
-　--lib LIB     ライブラリへのパス(srcがあるディレクトリ)を表示します。本家ACLのものと同じです。
-  -s            展開した部分が一行で表示され、提出ソースコードが読みやすくなります。NimおよびNim-ACL利用者を増やすためにもこのオプションを有効にしていただけたら嬉しいです。
-```
+
+bundle/embedのコンパイルにはコンパイラ側にもPythonが必要です。
+Unixでは`python3`、Windowsでは`python`を使い、`NACL_PYTHON`で指定を変更できます。
+提出に使う場合は、ライブラリとexpander本体に一致する公開済み参照を指定してください。
+出典の内容一致と、公開されていたことの確認は別です。
+出典・圧縮方式と過去の検証記録は[Expander資料](tools/EXPANDER_SUBMISSION.md)を参照してください。
 
 ## extra
 ACLにないがよく使いそうなライブラリを独自に実装しています。

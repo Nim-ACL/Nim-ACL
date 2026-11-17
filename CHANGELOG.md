@@ -4,6 +4,38 @@ All notable changes to Nim-ACL will be documented in this file.
 
 The format follows Keep a Changelog, and versions use Semantic Versioning.
 
+## [0.5.3] - Unreleased
+
+### Fixed
+- Preserve conditional import scopes, nested indentation and multiline literal values in Expander plain/embed output.
+- Correct singleton roots in the backup multipoint evaluator without changing its FFT backend requirements.
+- Correct chromatic-number subset transitions, internal SCC endpoint checks, and signed/unsigned ceiling-division boundaries.
+- Correct rolling-hash hashing and retain the selected base when concatenating strings.
+- Preserve input lifetime under ORC in legacy compression, and make its module self-contained.
+- Repair geometry operator visibility and centroid division, DSU-on-Tree callback lookup, legacy-header imports, SqrtTree identifiers and MexSet forward lookup.
+- Align Expander usage and iterative low-link documentation with the implementation.
+
+### Added
+- Expose `lowLinkUndirected(g, buildComponents = false)` for articulation points, bridge IDs and low-link data; full component construction remains available through `biconnectedComponents`.
+- Add compatibility, boundary, independent-oracle and Expander regressions for the affected modules.
+
+### Changed
+- Share internal Mo, KMP, run-length encoding, low-link and range-Fenwick operation bodies while retaining their existing entry points.
+- Allow opt-in worktree verification to preserve and check existing edits, staged changes and generated documentation.
+- Record module-consolidation review data without treating lexical similarity as API equivalence.
+
+### Compatibility notes
+- Preserve the distinct meanings of the modern and legacy Mo constructors and callbacks, legacy run-length tuple/decode behavior, and the two compression APIs.
+- `ceilDiv(low(T), -1)` raises `OverflowDefect`; nonzero unsigned `ceilMod` raises `RangeDefect` because its mathematical result is negative.
+- Remove obsolete generated `extra/graph/combined.nim`, `extra/other/combined.nim` and `extra/structure/combined.nim` artifacts. Clients referring to those generated paths must use the corresponding source modules.
+- Keep the existing coefficient-domain and noninvertible-input limits for polynomial operations.
+
+### Qualification status
+- This entry is a release-note candidate. The package version remains 0.5.2 until the release metadata is finalized.
+- Native Ubuntu and Windows results must be recorded against the exact candidate SHA; historical v0.5.2 CI is not evidence for this candidate.
+- Both rejected product-tree reuse candidates are excluded. No new performance result is claimed by this release-preparation audit.
+- Push, tags, release publication and hosted-document updates require a separate publication step.
+
 ## [0.5.2] - 2026-11-15
 
 ### Fixed
@@ -17,7 +49,7 @@ The format follows Keep a Changelog, and versions use Semantic Versioning.
 - Update the expander's source provenance handling and portable `plain` / `embed` / `bundle` expansion.
 - Preserve caller compiler flags and output path in bundled compilation; handle flattened module exports.
 - Update `atcoder-tools_template.nim` for single-case and multi-case Jinja2 input generation.
-- Keep `plain` as the default expander mode; `embed` and `bundle` remain available.
+- Keep `bundle` as the default expander mode; `plain` and `embed` remain available.
 
 ### Qualification status
 - Focused M192/M193 repairs, M194 local integration, and pre-template M195 Ubuntu/Windows CI passed.
