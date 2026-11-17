@@ -19,6 +19,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 CASES = [
+    "tests/test_int128_mixed_comparisons.nim", "tests/test_extra_bflow.nim",
     "tests/test_scc.nim", "tests/test_extra_divutils.nim",
     "tests/test_extra_lowlink.nim", "tests/test_extra_multipoint_evaluation_backup.nim",
     "tests/test_extra_chromatic_number.nim", "tests/test_compress_legacy_standalone.nim",
@@ -27,6 +28,8 @@ CASES = [
 SMOKE = '''import atcoder/[dsu, fenwicktree, modint]
 import atcoder/extra/graph/undirected_decomposition
 import atcoder/extra/math/polynomial_interpolation
+import atcoder/extra/numeric/int128
+import atcoder/extra/graph/bflow
 var uf = initDSU(3)
 uf.merge(0, 1)
 doAssert uf.same(0, 1)
@@ -47,6 +50,15 @@ doAssert full.bridges == @[a, b]
 type mint = modint998244353
 doAssert polynomialInterpolation(@[mint.init(0), mint.init(1), mint.init(2)],
   @[mint.init(3), mint.init(10), mint.init(27)]) == @[mint.init(3), mint.init(2), mint.init(5)]
+let signedZero = toInt128(0)
+doAssert signedZero >= -1 and -1 <= signedZero
+var numericFlow = initBFlow[int, Int128](2)
+numericFlow.add_supply(0, 2)
+numericFlow.add_demand(1, 2)
+numericFlow.add_edge(0, 1, 0, 3, toInt128(0))
+let numericResult = numericFlow.solve()
+doAssert numericResult[0] and numericResult[1] == toInt128(0)
+doAssert numericFlow.f == @[2]
 echo "RC_INSTALLED_PACKAGE_OK"
 '''
 

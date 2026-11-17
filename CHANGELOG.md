@@ -7,6 +7,9 @@ The format follows Keep a Changelog, and versions use Semantic Versioning.
 ## [0.5.3] - Unreleased
 
 ### Fixed
+- Preserve the Int128 or UInt128 operand domain when comparing with native integers in either order.
+- Route supplies and demands in b-flow instances where all edge costs are zero.
+- Register the compressed Fenwick 2D verifier for its Library Checker problem.
 - Preserve conditional import scopes, nested indentation and multiline literal values in Expander plain/embed output.
 - Correct singleton roots in the backup multipoint evaluator without changing its FFT backend requirements.
 - Correct chromatic-number subset transitions, internal SCC endpoint checks, and signed/unsigned ceiling-division boundaries.
@@ -32,6 +35,8 @@ The format follows Keep a Changelog, and versions use Semantic Versioning.
 - Keep the existing coefficient-domain and noninvertible-input limits for polynomial operations.
 
 ### Qualification status
+- The numerical fixes passed local OJ verification of 112 available targets on both required Nim versions and memory managers at `b07c3a7b`. Five uncached yukicoder targets still require authentication.
+- This RC retains the same library and verification sources; its final SHA still requires native Ubuntu/Windows qualification.
 - This entry and the package version 0.5.3 describe an unpublished release candidate. The publication date and final qualification are pending.
 - Native Ubuntu and Windows results must be recorded against the exact candidate SHA; historical v0.5.2 CI is not evidence for this candidate.
 - Both rejected product-tree reuse candidates are excluded. No new performance result is claimed by this release-preparation audit.
