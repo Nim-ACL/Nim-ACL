@@ -116,6 +116,7 @@ trap nacl_finish EXIT
     tests/test_extra_monotone_minima.nim
     tests/test_extra_dp_2d_edit_rectangle.nim
     tests/test_extra_math_basic.nim
+    tests/test_int128_mixed_comparisons.nim
     tests/test_extra_combination_table.nim
     tests/test_extra_eratosthenes.nim
     tests/test_extra_static_eratosthenes.nim

@@ -199,6 +199,48 @@ when not declared ATCODER_EXTRA_NUMERIC_INT128_HPP:
     else:
       1
 
+  # Preserve the 128-bit operand's domain before converters participate in
+  # common-type inference. The generic same-type entry points remain available.
+  func `<=`*[T: UInt128 or Int128; U: SomeInteger](
+      a: T, b: U,
+  ): bool {.inline.} =
+    `<=`(a, T(b))
+
+  func `<=`*[T: UInt128 or Int128; U: SomeInteger](
+      a: U, b: T,
+  ): bool {.inline.} =
+    `<=`(T(a), b)
+
+  func `>`*[T: UInt128 or Int128; U: SomeInteger](
+      a: T, b: U,
+  ): bool {.inline.} =
+    `>`(a, T(b))
+
+  func `>`*[T: UInt128 or Int128; U: SomeInteger](
+      a: U, b: T,
+  ): bool {.inline.} =
+    `>`(T(a), b)
+
+  func `>=`*[T: UInt128 or Int128; U: SomeInteger](
+      a: T, b: U,
+  ): bool {.inline.} =
+    `>=`(a, T(b))
+
+  func `>=`*[T: UInt128 or Int128; U: SomeInteger](
+      a: U, b: T,
+  ): bool {.inline.} =
+    `>=`(T(a), b)
+
+  func cmp*[T: UInt128 or Int128; U: SomeInteger](
+      a: T, b: U,
+  ): int {.inline.} =
+    cmp(a, T(b))
+
+  func cmp*[T: UInt128 or Int128; U: SomeInteger](
+      a: U, b: T,
+  ): int {.inline.} =
+    cmp(T(a), b)
+
   func `and`*(
       a,
       b: UInt128,
