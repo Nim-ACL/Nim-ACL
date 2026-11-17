@@ -3,6 +3,12 @@ ACL (AtCoder Library) のNimによる実装です。
 ACLで実装されているものはexpander含めてすべてNimに変換しています。
 一部、Nim向けに使いやすくなるような仕様も追加しました。
 
+## v0.5.3候補の対応環境
+Nim 2.2.4と2.2.10を必須検証版とし、`nim cpp`を使用します。
+パッケージの最低依存条件はNim 2.2.4です。これより古い版の互換性は未確認です。
+`tools/nim_version_policy.json`の`atcoder_legacy`は過去環境の識別値であり、対応済みの宣言ではありません。
+0.5.3はリリース候補です。Ubuntu/Windowsの候補SHAに対するCIと全体OJ検証の完了後に公開を判断します。
+
 ## expander
 Nim-ACLの`import`・`include`を展開し、`combined.nim`を生成します。
 `nim cpp`でコンパイルしてください。Python 3.8以降（lzmaを含む）とGitが必要です。
@@ -50,7 +56,7 @@ ACLにないがよく使いそうなライブラリを独自に実装してい�
 - [このドキュメント](https://github.com/online-judge-tools/verification-helper/blob/master/.verify-helper/docs/static/document.ja.md#%E5%AF%BE%E5%BF%9C%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E4%B8%80%E8%A6%A7)を参考にYUKICODER_TOKEN を取得し、環境変数を設定する。`export YUKICODER_TOKEN=xxx`
 - `src/`に移動する
 - すべてのverifyを通すには`oj-verify run`を実行する。初回は遅いので`-j N`(Nは論理コア数)をつけ並列処理が有効にすると良い
-- 個別にveifyした場合は`oj-verify verify/crt_test.nim`のようにpathを指定する
+- 個別にverifyする場合は`oj-verify run verify/crt_test.nim`のようにpathを指定する
 
 apple silicon上でverifyに失敗した場合
 - apple siliconはonline-judge側でスタックサイズを大きくすることができません。`ulimit -s 65000`の実行で多くのテストが成功するようになります

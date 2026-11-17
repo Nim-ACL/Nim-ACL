@@ -25,13 +25,14 @@ The format follows Keep a Changelog, and versions use Semantic Versioning.
 - Record module-consolidation review data without treating lexical similarity as API equivalence.
 
 ### Compatibility notes
+- Set the package's minimum Nim dependency to 2.2.4. The required verification versions are 2.2.4 and 2.2.10; compatibility with older versions is not qualified.
 - Preserve the distinct meanings of the modern and legacy Mo constructors and callbacks, legacy run-length tuple/decode behavior, and the two compression APIs.
 - `ceilDiv(low(T), -1)` raises `OverflowDefect`; nonzero unsigned `ceilMod` raises `RangeDefect` because its mathematical result is negative.
 - Remove obsolete generated `extra/graph/combined.nim`, `extra/other/combined.nim` and `extra/structure/combined.nim` artifacts. Clients referring to those generated paths must use the corresponding source modules.
 - Keep the existing coefficient-domain and noninvertible-input limits for polynomial operations.
 
 ### Qualification status
-- This entry is a release-note candidate. The package version remains 0.5.2 until the release metadata is finalized.
+- This entry and the package version 0.5.3 describe an unpublished release candidate. The publication date and final qualification are pending.
 - Native Ubuntu and Windows results must be recorded against the exact candidate SHA; historical v0.5.2 CI is not evidence for this candidate.
 - Both rejected product-tree reuse candidates are excluded. No new performance result is claimed by this release-preparation audit.
 - Push, tags, release publication and hosted-document updates require a separate publication step.

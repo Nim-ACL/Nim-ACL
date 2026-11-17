@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.5.2"
+version       = "0.5.3"
 author        = "zer0-star"
 description   = "ACL (AtCoder Library) implementation in Nim"
 license       = "CC0"
@@ -13,7 +13,7 @@ backend       = "cpp"
 
 # Dependencies
 
-requires "nim >= 1.0.0"
+requires "nim >= 2.2.4"
 
 after install:
   if defined(linux):
