@@ -68,10 +68,16 @@ when not declared ATCODER_MCF_COSTSCALING_HPP:
       while eps <= -c:
         eps = eps shl SCALING
   
+    # Even zero costs need one phase to route nonzero balances. Clamp the
+    # first phase instead of shifting 1 upward, which could overflow Cost.
+    var firstPhase = true
     while true:
       eps = eps shr SCALING
       if eps == Cost(0):
-        break
+        if not firstPhase:
+          break
+        eps = Cost(1)
+      firstPhase = false
   
       block refinePhase:
         var allBalanced = true
