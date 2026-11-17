@@ -1,3 +1,5 @@
+# verification-helper: PROBLEM https://judge.yosupo.jp/problem/point_add_rectangle_sum
+
 import std/strutils
 import atcoder/extra/monoid/monoid
 import atcoder/extra/structure/compressed_fenwicktree_2d
