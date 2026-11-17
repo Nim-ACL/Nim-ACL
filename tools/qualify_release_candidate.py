@@ -145,9 +145,15 @@ def main():
                 shutil.copy2(cached_list, nimble_dir / "packages_official.json")
             else:
                 run("nimble_refresh", [nimble, "--nimbleDir:" + str(nimble_dir), "refresh"], timeout=300)
+            run("nimble_version", [nimble, "--nimbleDir:" + str(nimble_dir), "--version"])
+            help_text = run("nimble_help", [nimble, "--nimbleDir:" + str(nimble_dir), "--help"])
             common = [nimble, "--nim:" + nim, "--nimbleDir:" + str(nimble_dir), "--offline"]
+            if "--useSystemNim" in help_text:
+                common.append("--useSystemNim")
             run("nimble_check", [*common, "check"])
-            run("nimble_dump", [*common, "dump", "--json"])
+            dump = json.loads(run("nimble_dump", [*common, "dump", "--json"]))
+            if dump["version"] != "0.5.3" or Path(dump["nimDir"]).resolve() != Path(nim).resolve().parent:
+                raise RuntimeError("NIMBLE_COMPILER_OR_VERSION_MISMATCH")
             run("nimble_install", [*common, "install", "-y"])
             packages = list(nimble_dir.glob("pkgs2/atcoder-0.5.3-*")) + list(nimble_dir.glob("pkgs/atcoder-0.5.3"))
             if len(packages) != 1:
@@ -165,7 +171,7 @@ def main():
             (report / "installed-source-hashes.json").write_text(json.dumps(installed_hashes, indent=2) + "\n")
             if actual_os == "Linux" and not ((package / "lib").is_symlink() and (package / "lib").resolve() == (package / "atcoder/extra").resolve()):
                 raise RuntimeError("LINUX_INSTALL_ALIAS_MISSING")
-            smoke = work / "installed smoke.nim"
+            smoke = work / "installed_smoke.nim"
             smoke.write_text(SMOKE)
             for mm in ("refc", "orc"):
                 run("installed_" + mm, [nim, "cpp", "-r", "--hints:off", "--warnings:off", "--noNimblePath",
