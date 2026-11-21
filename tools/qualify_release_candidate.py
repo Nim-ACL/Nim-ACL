@@ -24,6 +24,8 @@ CASES = [
     "tests/test_extra_lowlink.nim", "tests/test_extra_multipoint_evaluation_backup.nim",
     "tests/test_extra_chromatic_number.nim", "tests/test_compress_legacy_standalone.nim",
     "tests/test_rolling_hash_public_contract.nim",
+    "tests/test_implicit_treap_resources.nim",
+    "tests/test_implicit_treap_allocating_sink.nim",
 ]
 SMOKE = '''import atcoder/[dsu, fenwicktree, modint]
 import atcoder/extra/graph/undirected_decomposition

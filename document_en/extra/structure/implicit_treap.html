@@ -346,7 +346,24 @@ include Lazy Actions.</p>
 <li>construction from <code>n</code> initial values: <code>O(n log n)</code></li>
 </ul>
 <p>The worst case is <code>O(n)</code> when the randomized tree becomes highly unbalanced.</p>
-<p>Memory usage is <code>O(n)</code>. Erased node slots are reused through a free list.</p>
+<p>Memory usage is <code>O(h)</code>, where <code>h</code> is the retained node slot count defined below.
+Erased node slots are reused through a free list.</p>
+<h2 id="value-lifetimes">Value lifetimes</h2>
+<p>The pool retains erased slots and their values until reuse, reinitialization,
+overwrite, or destruction. Let <code>h</code> be the number of retained slots, including
+erased ones. Value assignment copies the pool independently. Reinitialization
+and overwriting a destination release its old element and aggregate values.
+With custom lifetime hooks, pool destruction and reinitialization take <code>O(h)</code>,
+and value assignment takes <code>O(h_destination + h_source)</code>, plus the hooks' costs.
+Nim 2.2.4/2.2.10 refc may also visit such slots during a move.</p>
+<p>For nontrivially copyable node values under refc, cleanup directly invokes the
+element destructors and clears the sequence reference using Nim's <code>wasMoved</code>.
+It does not assign default nodes: a user sink hook can allocate resources even
+for an empty value. GC write barriers are preserved when trees are held in
+managed containers. Trivially copyable values and orc retain their existing
+storage path.</p>
+<p>Value hooks must follow Nim's ownership rules. This cleanup does not replace
+compiler lifetime handling for <code>toSeq()</code> results or user-owned sequences.</p>
   </main>
 </body>
 </html>

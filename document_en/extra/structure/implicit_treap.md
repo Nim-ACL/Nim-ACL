@@ -161,4 +161,25 @@ Expected complexity:
 
 The worst case is `O(n)` when the randomized tree becomes highly unbalanced.
 
-Memory usage is `O(n)`. Erased node slots are reused through a free list.
+Memory usage is `O(h)`, where `h` is the retained node slot count defined below.
+Erased node slots are reused through a free list.
+
+## Value lifetimes
+
+The pool retains erased slots and their values until reuse, reinitialization,
+overwrite, or destruction. Let `h` be the number of retained slots, including
+erased ones. Value assignment copies the pool independently. Reinitialization
+and overwriting a destination release its old element and aggregate values.
+With custom lifetime hooks, pool destruction and reinitialization take `O(h)`,
+and value assignment takes `O(h_destination + h_source)`, plus the hooks' costs.
+Nim 2.2.4/2.2.10 refc may also visit such slots during a move.
+
+For nontrivially copyable node values under refc, cleanup directly invokes the
+element destructors and clears the sequence reference using Nim's `wasMoved`.
+It does not assign default nodes: a user sink hook can allocate resources even
+for an empty value. GC write barriers are preserved when trees are held in
+managed containers. Trivially copyable values and orc retain their existing
+storage path.
+
+Value hooks must follow Nim's ownership rules. This cleanup does not replace
+compiler lifetime handling for `toSeq()` results or user-owned sequences.

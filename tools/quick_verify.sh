@@ -602,6 +602,28 @@ fi
 rm -rf "$IMPLICIT_TREAP_TMP"
 # <<< IMPLICIT_TREAP_TEST <<<
 
+# Exercise native lifetime hooks with both memory managers. The refc cases
+# regress a pool-replacement leak that the default orc build cannot detect.
+IMPLICIT_TREAP_RESOURCE_TMP="$(
+  mktemp -d "${TMPDIR:-/tmp}/nacl_implicit_treap_resources.XXXXXX"
+)"
+for implicit_treap_resource_test in \
+  tests/test_implicit_treap_resources.nim \
+  tests/test_implicit_treap_allocating_sink.nim
+do
+  implicit_treap_resource_name="$(basename "$implicit_treap_resource_test" .nim)"
+  for implicit_treap_resource_mm in refc orc
+  do
+    STEP="Implicit Treap resource lifetime $implicit_treap_resource_mm"
+    nim cpp -r --hints:off --warnings:on -d:release \
+      --checks:on --overflowChecks:on --mm:"$implicit_treap_resource_mm" \
+      --nimcache:"$IMPLICIT_TREAP_RESOURCE_TMP/${implicit_treap_resource_name}_${implicit_treap_resource_mm}_cache" \
+      --out:"$IMPLICIT_TREAP_RESOURCE_TMP/${implicit_treap_resource_name}_${implicit_treap_resource_mm}" \
+      "$implicit_treap_resource_test"
+  done
+done
+rm -rf "$IMPLICIT_TREAP_RESOURCE_TMP"
+
 # >>> LOG_OF_SET_POWER_SERIES_TEST >>>
 LOG_OF_SET_POWER_SERIES_TMP="/tmp/nacl_log_of_set_power_series_quick_$$"
 

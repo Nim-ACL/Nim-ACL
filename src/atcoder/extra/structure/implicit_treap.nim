@@ -1,4 +1,6 @@
 when not declared ATCODER_EXTRA_STRUCTURE_IMPLICIT_TREAP_HPP:
+  import std/typetraits
+
   const
     ATCODER_EXTRA_STRUCTURE_IMPLICIT_TREAP_HPP* = 1
 
@@ -17,14 +19,53 @@ when not declared ATCODER_EXTRA_STRUCTURE_IMPLICIT_TREAP_HPP:
       backwardAggregate: S
       reversePending: bool
 
+    # Keep seq's refc write barriers when a tree is moved into a GC container.
+    ImplicitTreapStorage[S] = distinct seq[ImplicitTreapNode[S]]
+
     ImplicitTreap*[
         S;
         p: static[tuple]
     ] = object
       root: int
-      nodes: seq[ImplicitTreapNode[S]]
+      when defined(gcRefc) and not supportsCopyMem(ImplicitTreapNode[S]):
+        ownedNodes: ImplicitTreapStorage[S]
+      else:
+        nodes: seq[ImplicitTreapNode[S]]
       freeList: seq[int]
       randomState: uint64
+
+  template data[S](storage: ImplicitTreapStorage[S]): untyped =
+    seq[ImplicitTreapNode[S]](storage)
+
+  proc clear[S](storage: var ImplicitTreapStorage[S]) =
+    # refc seq replacement does not destroy the old elements. Destroy them
+    # directly: assigning a default node can invoke allocating user sink hooks.
+    `=destroy`(storage.data)
+    wasMoved(storage.data)
+
+  proc `=destroy`[S](storage: var ImplicitTreapStorage[S]) =
+    storage.clear()
+
+  proc `=copy`[S](dest: var ImplicitTreapStorage[S],
+      source: ImplicitTreapStorage[S]) =
+    if addr(dest) == unsafeAddr(source): return
+    if dest.data.len > 0 and source.data.len > 0 and
+        addr(dest.data[0]) == unsafeAddr(source.data[0]): return
+    dest.clear()
+    dest.data = newSeq[ImplicitTreapNode[S]](source.data.len)
+    for i in 0..<source.data.len:
+      dest.data[i] = source.data[i]
+
+  proc `=sink`[S](dest: var ImplicitTreapStorage[S],
+      source: ImplicitTreapStorage[S]) =
+    dest.clear()
+    # Borrow the consumed source without copying or destroying its payloads.
+    # Moving the underlying seq retains Nim's element and GC handling.
+    var consumed {.cursor.} = source
+    dest.data = move(consumed.data)
+
+  template nodes[IT: ImplicitTreap](tree: IT): untyped =
+    tree.ownedNodes.data
 
 
   template calcOp[
@@ -375,7 +416,10 @@ when not declared ATCODER_EXTRA_STRUCTURE_IMPLICIT_TREAP_HPP:
         DefaultImplicitTreapSeed,
   ) =
     tree.root = -1
-    tree.nodes = @[]
+    when defined(gcRefc) and not supportsCopyMem(ImplicitTreapNode[IT.S]):
+      tree.ownedNodes.clear()
+    else:
+      tree.nodes = @[]
     tree.freeList = @[]
     tree.randomState = seed
 
