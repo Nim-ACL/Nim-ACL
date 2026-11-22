@@ -22,8 +22,18 @@ All ranges are half-open `[l, r)`.
 Typically:
 
 ```text
-O((n + q) sqrt(n) * add/remove cost)
+O(q log q + (q B + n^2 / B) * add/remove cost)
+B = block size (default: max(1, floor(sqrt(n))))
 ```
+
+Storage is `O(q)`, including the ordered query copy.
+
+## Legacy API
+
+`atcoder/extra/structure/mo` delegates to the same internal core. Its
+`initMo(N, Q)` uses the query count as the second argument; the modern API
+uses the block size. When importing both, use `initMo(N = n, Q = q)` or
+`initMo(n, blockSize = b)` to distinguish them.
 
 ## Related resources
 

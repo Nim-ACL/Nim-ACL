@@ -91,7 +91,22 @@ doAssert cc.decode(2) == 100
 - `encode`, `indexOf`: `O(log k)`
 - `decode`: `O(1)`
 - sequence 全体の圧縮: `O(n log k)`
-- memory: `O(k)`
+- 結果の保存領域: `O(k)`
+- 構築時の一時領域: `O(n + k)`
+
+## legacy API との違い
+
+[legacy Compress](../other/compress.md) は seq 表現と複数 seq の可変長構築を持ち、
+ハッシュで重複を除いてから異なる値だけをソートします。
+構築は期待 `O(n + k log k)` です。
+この API は hash を要求せず、入力全体をソートする `O(n log n)` の構築を維持しています。
+`lowerBoundIndex` / `upperBoundIndex` は `<` のみで利用できます。
+
+`values` を直接変更する場合、検索には整列状態が必要です。
+重複を含む整列 `values` に対しても `indexOf` は最初の一致位置を返します。
+legacy の標準 `binarySearch` による一致位置とは契約が異なります。
+欠損時は `indexOf` が `-1`、`encode` が `AssertionDefect` です。
+`encode` と `decode` の `doAssert` は `--assertions:off` でも有効です。
 
 ## 関連資料
 

@@ -285,10 +285,21 @@ pre.nim-line-numbers .code-line::before {
   <span class="tok-identifier">g</span><span class="tok-punctuation">:</span> <span class="tok-identifier">UndirectedGraph</span>
 <span class="tok-punctuation">)</span><span class="tok-punctuation">:</span> <span class="tok-identifier">BlockCutTreeResult</span>
 </code></pre>
+<h2 id="low-link-traversal">Low-link traversal</h2>
+<pre class="nim-code nim-acl-highlighted"><code class="language-nim nim-acl-highlighted"><span class="tok-keyword">proc</span> <span class="tok-identifier">lowLinkUndirected</span><span class="tok-punctuation">(</span>
+  <span class="tok-identifier">g</span><span class="tok-punctuation">:</span> <span class="tok-identifier">UndirectedGraph</span><span class="tok-punctuation">,</span>
+  <span class="tok-identifier">buildComponents</span><span class="tok-punctuation">:</span> <span class="tok-keyword">static</span> <span class="tok-identifier">bool</span> <span class="tok-operator">=</span> <span class="tok-identifier">false</span>
+<span class="tok-punctuation">)</span><span class="tok-punctuation">:</span> <span class="tok-identifier">BiconnectedComponentsResult</span>
+</code></pre>
+<p>The default returns <code>ord</code>, <code>low</code>, <code>articulation</code> and <code>bridges</code>; the three
+component fields remain empty. Articulation vertices and bridge IDs are in DFS
+completion order, not sorted order. With <code>buildComponents = true</code>, components
+are built and articulation/bridge results are sorted. <code>biconnectedComponents</code>
+provides the full decomposition. The shared DFS uses an explicit stack.</p>
 <h2 id="complexity">Complexity</h2>
 <p>Every decomposition runs in <code>O(n + m)</code> time and uses <code>O(n + m)</code> memory.</p>
 <h2 id="notes">Notes</h2>
-<p>Disconnected graphs are supported and produce forests. The DFS implementation is recursive.</p>
+<p>Disconnected graphs are supported and produce forests. The DFS implementation is iterative and uses an explicit stack.</p>
   </main>
 </body>
 </html>

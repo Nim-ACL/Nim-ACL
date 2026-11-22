@@ -264,8 +264,15 @@ pre.nim-line-numbers .code-line::before {
 <p>All ranges are half-open <code>[l, r)</code>.</p>
 <h2 id="complexity">Complexity</h2>
 <p>Typically:</p>
-<pre><code class="language-text">O((n + q) sqrt(n) * add/remove cost)
+<pre><code class="language-text">O(q log q + (q B + n^2 / B) * add/remove cost)
+B = block size (default: max(1, floor(sqrt(n))))
 </code></pre>
+<p>Storage is <code>O(q)</code>, including the ordered query copy.</p>
+<h2 id="legacy-api">Legacy API</h2>
+<p><code>atcoder/extra/structure/mo</code> delegates to the same internal core. Its
+<code>initMo(N, Q)</code> uses the query count as the second argument; the modern API
+uses the block size. When importing both, use <code>initMo(N = n, Q = q)</code> or
+<code>initMo(n, blockSize = b)</code> to distinguish them.</p>
 <h2 id="related-resources">Related resources</h2>
 <ul>
 <li><a href="https://cp-algorithms.com/data_structures/sqrt_decomposition.html#mos-algorithm" target="_blank" rel="noopener">cp-algorithms: Mo's Algorithm</a></li>

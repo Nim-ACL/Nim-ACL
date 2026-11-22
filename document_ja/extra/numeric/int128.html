@@ -317,6 +317,12 @@ C backendとC++ backendの両方で利用できる。</p>
 <span class="tok-operator">&gt;=</span>
 <span class="tok-identifier">cmp</span>
 </code></pre>
+<p>通常の整数型との混在比較では、整数側を128-bit側と同じ型へ変換して比較する。
+左右の順序によって符号付き・符号なしの解釈は変わらない。
+例えば <code>toInt128(0) &gt;= -1</code> は <code>true</code> となる。
+<code>UInt128</code> への負の整数の変換は、従来どおり <code>2^128</code> を法としてwrapする。
+<code>Int128</code> と <code>UInt128</code> の直接比較では、どちらの解釈を使うか明示的な変換で指定する。
+同型比較の <code>int128.cmp[Int128](a, b)</code> 等のgeneric呼び出しも引き続き利用できる。</p>
 <p><code>UInt128</code> の <code>+</code>、<code>-</code>、<code>*</code> は <code>2^128</code> を法とするwrap演算である。
 <code>Int128</code> の <code>+</code>、<code>-</code>、<code>*</code> もtwo's-complement bit列上でwrapする。</p>
 <p><code>Int128</code> の <code>div</code> と <code>mod</code> は0方向へ丸める。</p>

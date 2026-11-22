@@ -48,10 +48,25 @@ proc blockCutTree(
 ): BlockCutTreeResult
 ~~~
 
+## Low-link traversal
+
+~~~nim
+proc lowLinkUndirected(
+  g: UndirectedGraph,
+  buildComponents: static bool = false
+): BiconnectedComponentsResult
+~~~
+
+The default returns `ord`, `low`, `articulation` and `bridges`; the three
+component fields remain empty. Articulation vertices and bridge IDs are in DFS
+completion order, not sorted order. With `buildComponents = true`, components
+are built and articulation/bridge results are sorted. `biconnectedComponents`
+provides the full decomposition. The shared DFS uses an explicit stack.
+
 ## Complexity
 
 Every decomposition runs in `O(n + m)` time and uses `O(n + m)` memory.
 
 ## Notes
 
-Disconnected graphs are supported and produce forests. The DFS implementation is recursive.
+Disconnected graphs are supported and produce forests. The DFS implementation is iterative and uses an explicit stack.

@@ -258,7 +258,7 @@ pre.nim-line-numbers .code-line::before {
 $s$はseqでも指定することができます。その場合は複数始点($s$の元はすべて距離0)で実行できます。
 $d$は内部的にはBellmanFordResultというobjectで渡されていて、下記のような呼び出しが可能である。</p>
 <h2 id="_2">距離の取得</h2>
-<pre class="nim-code nim-acl-highlighted"><code class="language-nim nim-acl-highlighted"><span class="tok-identifier">d</span><span class="tok-punctuation">[</span><span class="tok-identifier">u</span><span class="tok-punctuation">:</span><span class="tok-identifier">int</span><span class="tok-punctuation">]</span><span class="tok-punctuation">:</span><span class="tok-identifier">T</span>
+<pre class="nim-code nim-acl-highlighted"><code class="language-nim nim-acl-highlighted"><span class="tok-identifier">d</span><span class="tok-punctuation">[</span><span class="tok-identifier">u</span><span class="tok-punctuation">:</span><span class="tok-identifier">U</span><span class="tok-punctuation">]</span><span class="tok-punctuation">:</span><span class="tok-identifier">T</span>
 </code></pre>
 <p>$s$から$u$までの距離を返します。</p>
 <h2 id="_3">直前ノードの取得</h2>
@@ -266,7 +266,7 @@ $d$は内部的にはBellmanFordResultというobjectで渡されていて、下
 </code></pre>
 <p>$s$から$u$までの最短経路上で$u$の前のノード(の1つ)を返します。</p>
 <h2 id="_4">最短経路の取得</h2>
-<pre class="nim-code nim-acl-highlighted"><code class="language-nim nim-acl-highlighted"><span class="tok-identifier">d</span><span class="tok-operator">.</span><span class="tok-identifier">path</span><span class="tok-punctuation">(</span><span class="tok-identifier">t</span><span class="tok-punctuation">:</span><span class="tok-identifier">int</span><span class="tok-punctuation">)</span><span class="tok-punctuation">:</span><span class="tok-identifier">seq</span><span class="tok-punctuation">[</span><span class="tok-identifier">int</span><span class="tok-punctuation">]</span>
+<pre class="nim-code nim-acl-highlighted"><code class="language-nim nim-acl-highlighted"><span class="tok-identifier">d</span><span class="tok-operator">.</span><span class="tok-identifier">path</span><span class="tok-punctuation">(</span><span class="tok-identifier">t</span><span class="tok-punctuation">:</span><span class="tok-identifier">U</span><span class="tok-punctuation">)</span><span class="tok-punctuation">:</span><span class="tok-identifier">seq</span><span class="tok-punctuation">[</span><span class="tok-identifier">U</span><span class="tok-punctuation">]</span>
 </code></pre>
 <p>頂点$t$までの最短経路を取得。
 戻り値は$s$で始まり$t$で終わるノード列となる。(Edge[T]で返すべきか。。。)</p>

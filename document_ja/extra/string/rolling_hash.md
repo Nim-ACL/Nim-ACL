@@ -23,7 +23,7 @@
     proc `-=`*[RH: RH_Base](a:var RH, b:RH) =
     proc `-`*[RH: RH_Base](a, b:RH):RH = result = a;result -= b
     proc `$`*[RH: RH_Base](a: RH):string =
-    proc hash*[RH: RH_Base](a:RH):Hash = a.h.hash
+    proc hash*[RH: RH_Base](a:RH):Hash {.inline.} = a.uint.hash
     type RollingHash*[base: static[uint]] = object
     proc initRollingHash*(s:string, base: static[uint] = 1000000007'u):auto =
     type PartialRollingHash*[base: static[uint]] = object
@@ -33,8 +33,8 @@
     proc `&=`*(a:var PartialRollingHash, c:SomeInteger or char) =
     proc `&`*(a:PartialRollingHash, c:SomeInteger or char):PartialRollingHash = result = a;result &= c
     proc `&`*(c:SomeInteger or char, a:PartialRollingHash):PartialRollingHash =
-    proc `&`*(a:PartialRollingHash, c:string):PartialRollingHash = a & initRollingHash(c)[0 .. ^1]
-    proc `&`*(c:string, a:PartialRollingHash):PartialRollingHash = initRollingHash(c)[0 .. ^1] & a
+    proc `&`*(a:PartialRollingHash, c:string):PartialRollingHash = a & initRollingHash(c, a.base)[0 .. ^1]
+    proc `&`*(c:string, a:PartialRollingHash):PartialRollingHash = initRollingHash(c, a.base)[0 .. ^1] & a
     proc LCP*(self, b:RollingHash; p1, p2:RangeType):int =
 
 ## 概要
@@ -47,4 +47,6 @@ TODO: 使用例を追加してください。
 
 ## 注意
 
-TODO: 制約、前提条件、落とし穴を記述してください。
+string の前置・後置連結では、元の部分ハッシュの基数を使用します。空文字列の連結でも値と長さを維持します。
+
+`RH_Base` の等値比較と `hash` は格納された `uint` 値に基づきます。`PartialRollingHash` の等値比較は長さも比較します。ハッシュ値が一致しても文字列の一致は保証されません。

@@ -90,7 +90,7 @@ proc `+`*[RH: RH_Base](a, b:RH):RH = result = a;result += b
 proc `-=`*[RH: RH_Base](a:var RH, b:RH) =
 proc `-`*[RH: RH_Base](a, b:RH):RH = result = a;result -= b
 proc `$`*[RH: RH_Base](a: RH):string =
-proc hash*[RH: RH_Base](a:RH):Hash = a.h.hash
+proc hash*[RH: RH_Base](a:RH):Hash {.inline.} = a.uint.hash
 type RollingHash*[base: static[uint]] = object
 proc initRollingHash*(s:string, base: static[uint] = 1000000007'u):auto =
 type PartialRollingHash*[base: static[uint]] = object
@@ -100,8 +100,8 @@ proc `&amp;`*[T: PartialRollingHash](h1, h2: T):T =
 proc `&amp;=`*(a:var PartialRollingHash, c:SomeInteger or char) =
 proc `&amp;`*(a:PartialRollingHash, c:SomeInteger or char):PartialRollingHash = result = a;result &amp;= c
 proc `&amp;`*(c:SomeInteger or char, a:PartialRollingHash):PartialRollingHash =
-proc `&amp;`*(a:PartialRollingHash, c:string):PartialRollingHash = a &amp; initRollingHash(c)[0 .. ^1]
-proc `&amp;`*(c:string, a:PartialRollingHash):PartialRollingHash = initRollingHash(c)[0 .. ^1] &amp; a
+proc `&amp;`*(a:PartialRollingHash, c:string):PartialRollingHash = a &amp; initRollingHash(c, a.base)[0 .. ^1]
+proc `&amp;`*(c:string, a:PartialRollingHash):PartialRollingHash = initRollingHash(c, a.base)[0 .. ^1] &amp; a
 proc LCP*(self, b:RollingHash; p1, p2:RangeType):int =
 </code></pre>
 <h2 id="_1">概要</h2>
@@ -109,7 +109,8 @@ proc LCP*(self, b:RollingHash; p1, p2:RangeType):int =
 <h2 id="_2">使用例</h2>
 <p>TODO: 使用例を追加してください。</p>
 <h2 id="_3">注意</h2>
-<p>TODO: 制約、前提条件、落とし穴を記述してください。</p>
+<p>string の前置・後置連結では、元の部分ハッシュの基数を使用します。空文字列の連結でも値と長さを維持します。</p>
+<p><code>RH_Base</code> の等値比較と <code>hash</code> は格納された <code>uint</code> 値に基づきます。<code>PartialRollingHash</code> の等値比較は長さも比較します。ハッシュ値が一致しても文字列の一致は保証されません。</p>
   </main>
 </body>
 </html>

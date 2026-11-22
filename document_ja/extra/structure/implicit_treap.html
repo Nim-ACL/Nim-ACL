@@ -385,7 +385,21 @@ split・mergeは内部操作として使用します。</p>
 <li>長さ<code>n</code>の初期列からの構築: <code>O(n log n)</code></li>
 </ul>
 <p>最悪計算量は木が偏った場合の<code>O(n)</code>です。</p>
-<p>メモリ使用量は<code>O(n)</code>です。削除済みノードはfree listで再利用します。</p>
+<p>メモリ使用量は、後述の保持slot数<code>h</code>に対する<code>O(h)</code>です。
+削除済みノードはfree listで再利用します。</p>
+<h2 id="_7">値の寿命</h2>
+<p>削除slotとその値は、再利用・再初期化・上書き・pool破棄まで保持します。
+削除済みを含む保持slot数を<code>h</code>とします。値代入ではpoolを独立に複製し、
+再初期化や代入先への上書きでは旧要素と集計値を破棄します。
+独自の寿命hookがある場合、poolの破棄・再初期化は<code>O(h)</code>、値代入は
+<code>O(h_destination + h_source)</code>に各hookの費用が加わります。
+Nim 2.2.4/2.2.10のrefcでは、このようなpoolのmoveもslotを走査する場合があります。</p>
+<p>refcでノード値が単純コピーできない場合、pool破棄は要素のdestructorを直接呼び、
+Nimの<code>wasMoved</code>処理で列参照を外します。空値でも利用者のsink hookが資源を
+確保できるため、既定ノードの代入は行いません。木をGC管理コンテナに入れた場合も
+write barrierを維持します。単純コピーできる値とorcの格納経路は従来どおりです。</p>
+<p>値のhookはNimの所有権規則を満たす必要があります。この破棄処理は、<code>toSeq()</code>の
+返す列や利用者側の列に対するコンパイラの寿命管理を置き換えません。</p>
   </main>
 </body>
 </html>
